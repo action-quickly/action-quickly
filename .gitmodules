@@ -4,3 +4,6 @@
 [submodule "examples/plugins/json-formatter"]
 	path = examples/plugins/json-formatter
 	url = https://github.com/action-quickly/aq-json-formatter.git
+[submodule "examples/plugins/translator"]
+	path = examples/plugins/translator
+	url = https://github.com/action-quickly/aq-translator.git
