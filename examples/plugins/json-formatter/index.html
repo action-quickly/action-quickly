@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, "Segoe UI", sans-serif; background: rgba(30,30,35,0.95); color: #e8e8e8; padding: 20px; height: 100vh; display: flex; flex-direction: column; gap: 12px; }
+    h1 { font-size: 18px; }
+    textarea { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px; color: #e8e8e8; font-family: "Cascadia Code", monospace; font-size: 13px; resize: none; outline: none; }
+    .actions { display: flex; gap: 8px; }
+    button { background: #4a9eff; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; }
+    button:hover { background: #3a8ee5; }
+    .result { font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <h1>JSON 格式化</h1>
+  <textarea id="input" placeholder="粘贴 JSON..."></textarea>
+  <div class="actions">
+    <button onclick="format()">格式化</button>
+    <button onclick="minify()">压缩</button>
+    <button onclick="validate()">校验</button>
+    <button onclick="copy()">复制结果</button>
+  </div>
+  <div class="result" id="result"></div>
+  <script>
+    var ipcId = 0, pending = {};
+    function invoke(cmd, args) {
+      return new Promise(function(resolve, reject) {
+        var id = ++ipcId; pending[id] = { resolve: resolve, reject: reject };
+        window.parent.postMessage({ source: "action-quick-plugin", id: id, cmd: cmd, args: args || {} }, "*");
+      });
+    }
+    window.addEventListener("message", function(e) {
+      var d = e.data;
+      if (!d || d.source !== "action-quick-host") return;
+      if (d.type === "aq-init-bridge" && d.script) { try { eval(d.script); } catch(x){} return; }
+      if (d.type === "plugin-params" && d.params.contextText) {
+        document.getElementById("input").value = d.params.contextText;
+      }
+      if (d.id && pending[d.id]) { var c = pending[d.id]; delete pending[d.id]; d.error ? c.reject(d.error) : c.resolve(d.result); }
+    });
+
+    function format() {
+      try { document.getElementById("input").value = JSON.stringify(JSON.parse(document.getElementById("input").value), null, 2); setResult("格式化成功"); }
+      catch(e) { setResult("错误: " + e.message); }
+    }
+    function minify() {
+      try { document.getElementById("input").value = JSON.stringify(JSON.parse(document.getElementById("input").value)); setResult("压缩成功"); }
+      catch(e) { setResult("错误: " + e.message); }
+    }
+    function validate() {
+      try { JSON.parse(document.getElementById("input").value); setResult("✓ 有效的 JSON"); }
+      catch(e) { setResult("✗ 无效: " + e.message); }
+    }
+    function copy() {
+      invoke("aq_clipboard_write", { text: document.getElementById("input").value }).then(function() { setResult("已复制"); }).catch(function(e) { setResult("错误: " + e); });
+    }
+    function setResult(msg) { document.getElementById("result").textContent = msg; }
+  </script>
+</body>
+</html>

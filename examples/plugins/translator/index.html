@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, "Segoe UI", sans-serif; background: rgba(30,30,35,0.95); color: #e8e8e8; padding: 20px; height: 100vh; display: flex; flex-direction: column; gap: 12px; }
+    h1 { font-size: 18px; }
+    .row { display: flex; align-items: center; gap: 8px; }
+    select, button { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 10px; color: #e8e8e8; font-size: 13px; font-family: inherit; outline: none; }
+    button { background: #4a9eff; border: none; cursor: pointer; }
+    button:hover { background: #3a8ee5; }
+    textarea { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px; color: #e8e8e8; font-size: 14px; resize: none; outline: none; }
+    .result { font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <h1>翻译</h1>
+  <div class="row">
+    <select id="from">
+      <option value="zh">中文</option>
+      <option value="en">英语</option>
+      <option value="ja">日语</option>
+      <option value="ko">韩语</option>
+    </select>
+    <span>→</span>
+    <select id="to">
+      <option value="en">英语</option>
+      <option value="zh">中文</option>
+      <option value="ja">日语</option>
+      <option value="ko">韩语</option>
+    </select>
+    <button onclick="translateText()">翻译</button>
+    <button onclick="copy()">复制</button>
+  </div>
+  <textarea id="input" placeholder="输入要翻译的文本..."></textarea>
+  <textarea id="output" placeholder="翻译结果..." readonly></textarea>
+  <div class="result" id="result"></div>
+  <script>
+    var ipcId = 0, pending = {};
+    function invoke(cmd, args) {
+      return new Promise(function(resolve, reject) {
+        var id = ++ipcId; pending[id] = { resolve: resolve, reject: reject };
+        window.parent.postMessage({ source: "action-quick-plugin", id: id, cmd: cmd, args: args || {} }, "*");
+      });
+    }
+    window.addEventListener("message", function(e) {
+      var d = e.data;
+      if (!d || d.source !== "action-quick-host") return;
+      if (d.type === "aq-init-bridge" && d.script) { try { eval(d.script); } catch(x){} return; }
+      if (d.type === "plugin-params" && d.params.contextText) {
+        document.getElementById("input").value = d.params.contextText;
+        translateText();
+      }
+      if (d.id && pending[d.id]) { var c = pending[d.id]; delete pending[d.id]; d.error ? c.reject(d.error) : c.resolve(d.result); }
+    });
+
+    function translateText() {
+      var text = document.getElementById("input").value.trim();
+      if (!text) { setResult("请输入文本"); return; }
+      var from = document.getElementById("from").value;
+      var to = document.getElementById("to").value;
+      setResult("翻译中...");
+      var url = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(text) + "&langpair=" + from + "|" + to;
+      invoke("aq_http_get", { url: url }).then(function(response) {
+        try {
+          var data = JSON.parse(response);
+          document.getElementById("output").value = data.responseData.translatedText;
+          setResult("");
+        } catch(e) { setResult("解析失败: " + e.message); }
+      }).catch(function(e) { setResult("错误: " + e); });
+    }
+
+    function copy() {
+      invoke("aq_clipboard_write", { text: document.getElementById("output").value }).then(function() { setResult("已复制"); }).catch(function(e) { setResult("错误: " + e); });
+    }
+    function setResult(msg) { document.getElementById("result").textContent = msg; }
+  </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "create-action-quick-plugin",
+  "version": "0.1.0",
+  "description": "Scaffold a new ActionQuick plugin",
+  "type": "module",
+  "bin": {
+    "create-action-quick-plugin": "bin/index.js"
+  },
+  "license": "MIT"
+}

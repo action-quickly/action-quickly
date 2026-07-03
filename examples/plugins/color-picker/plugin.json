@@ -1,0 +1,18 @@
+{
+  "id": "color-picker",
+  "name": "颜色拾取器",
+  "version": "1.0.0",
+  "author": "ActionQuick",
+  "description": "颜色选择，HEX/RGB/HSL 互转",
+  "icon": "icon.png",
+  "main": "index.html",
+  "keywords": ["color", "颜色", "picker", "hex", "rgb", "ysq"],
+  "context": {
+    "text": {
+      "pattern": "^#[0-9a-fA-F]{3,8}$|^rgb\\(",
+      "label": "颜色"
+    }
+  },
+  "permissions": ["clipboard"],
+  "minHostVersion": "0.1.0"
+}

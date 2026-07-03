@@ -1,0 +1,52 @@
+[
+  {
+    "id": "json-formatter",
+    "name": "JSON 格式化",
+    "version": "1.0.0",
+    "author": "ActionQuick",
+    "description": "格式化、压缩、校验 JSON",
+    "repo": "https://github.com/action-quick/aq-json-formatter",
+    "download": "https://github.com/action-quick/aq-json-formatter/releases/download/v1.0.0/json-formatter.zip",
+    "tags": ["开发", "JSON"]
+  },
+  {
+    "id": "translator",
+    "name": "翻译",
+    "version": "1.0.0",
+    "author": "ActionQuick",
+    "description": "多语言翻译，支持中英日韩",
+    "repo": "https://github.com/action-quick/aq-translator",
+    "download": "https://github.com/action-quick/aq-translator/releases/download/v1.0.0/translator.zip",
+    "tags": ["翻译", "工具"]
+  },
+  {
+    "id": "base64",
+    "name": "Base64 编解码",
+    "version": "1.0.0",
+    "author": "ActionQuick",
+    "description": "Base64 编码和解码",
+    "repo": "https://github.com/action-quick/aq-base64",
+    "download": "https://github.com/action-quick/aq-base64/releases/download/v1.0.0/base64.zip",
+    "tags": ["开发", "编码"]
+  },
+  {
+    "id": "color-picker",
+    "name": "颜色拾取器",
+    "version": "1.0.0",
+    "author": "ActionQuick",
+    "description": "屏幕取色，HEX/RGB/HSL 转换",
+    "repo": "https://github.com/action-quick/aq-color-picker",
+    "download": "https://github.com/action-quick/aq-color-picker/releases/download/v1.0.0/color-picker.zip",
+    "tags": ["设计", "颜色"]
+  },
+  {
+    "id": "timestamp",
+    "name": "时间戳转换",
+    "version": "1.0.0",
+    "author": "ActionQuick",
+    "description": "Unix 时间戳与日期互转",
+    "repo": "https://github.com/action-quick/aq-timestamp",
+    "download": "https://github.com/action-quick/aq-timestamp/releases/download/v1.0.0/timestamp.zip",
+    "tags": ["开发", "时间"]
+  }
+]

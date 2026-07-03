@@ -1,0 +1,18 @@
+{
+  "id": "hello",
+  "name": "Hello 示例插件",
+  "version": "1.1.0",
+  "author": "ActionQuick",
+  "description": "示例插件，展示剪贴板、通知、存储等能力",
+  "icon": "icon.png",
+  "main": "index.html",
+  "keywords": ["hello", "你好", "示例", "test"],
+  "context": {
+    "text": {
+      "pattern": "^.+$",
+      "label": "文本"
+    }
+  },
+  "permissions": ["clipboard", "storage", "notification", "http"],
+  "minHostVersion": "0.1.0"
+}

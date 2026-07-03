@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hello 示例插件</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: rgba(30, 30, 35, 0.95);
+      color: #e8e8e8;
+      padding: 24px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+    h1 { font-size: 20px; font-weight: 600; }
+    .section {
+      background: rgba(255,255,255,0.05);
+      padding: 16px;
+      border-radius: 8px;
+    }
+    .section h3 { font-size: 14px; margin-bottom: 8px; color: #4a9eff; }
+    .params code { color: #4a9eff; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      background: #4a9eff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    button:hover { background: #3a8ee5; }
+    .result {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
+      word-break: break-all;
+    }
+    input {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: #e8e8e8;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      flex: 1;
+      min-width: 100px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Hello 示例插件</h1>
+
+  <div class="section">
+    <h3>插件参数</h3>
+    <div class="result" id="params">加载参数中...</div>
+  </div>
+
+  <div class="section">
+    <h3>剪贴板</h3>
+    <div class="actions">
+      <button id="writeClip">写入剪贴板</button>
+      <button id="readClip">读取剪贴板</button>
+    </div>
+    <div class="result" id="clipResult"></div>
+  </div>
+
+  <div class="section">
+    <h3>系统通知</h3>
+    <div class="actions">
+      <button id="notify">发送通知</button>
+    </div>
+    <div class="result" id="notifyResult"></div>
+  </div>
+
+  <div class="section">
+    <h3>KV 存储</h3>
+    <div class="actions">
+      <input id="storageKey" placeholder="key" value="test" />
+      <input id="storageValue" placeholder="value" value="hello" />
+      <button id="storageSet">写入</button>
+      <button id="storageGet">读取</button>
+      <button id="storageKeys">所有 key</button>
+    </div>
+    <div class="result" id="storageResult"></div>
+  </div>
+
+  <div class="section">
+    <h3>HTTP 请求</h3>
+    <div class="actions">
+      <button id="httpGet">GET httpbin.org/get</button>
+    </div>
+    <div class="result" id="httpResult"></div>
+  </div>
+
+  <script>
+    var paramsEl = document.getElementById("params");
+    var clipResultEl = document.getElementById("clipResult");
+    var notifyResultEl = document.getElementById("notifyResult");
+    var storageResultEl = document.getElementById("storageResult");
+    var httpResultEl = document.getElementById("httpResult");
+
+    // IPC 调用
+    var ipcId = 0;
+    var pendingCalls = {};
+
+    function invoke(cmd, args) {
+      return new Promise(function(resolve, reject) {
+        var id = ++ipcId;
+        pendingCalls[id] = { resolve: resolve, reject: reject };
+        window.parent.postMessage({
+          source: "action-quick-plugin",
+          id: id,
+          cmd: cmd,
+          args: args || {}
+        }, "*");
+      });
+    }
+
+    window.addEventListener("message", function(event) {
+      var data = event.data;
+      if (!data || data.source !== "action-quick-host") return;
+
+      // 主窗口请求注入桥接脚本
+      if (data.type === "aq-init-bridge" && data.script) {
+        try { eval(data.script); } catch(e) {}
+        return;
+      }
+
+      // IPC 响应
+      if (data.id && pendingCalls[data.id]) {
+        var call = pendingCalls[data.id];
+        delete pendingCalls[data.id];
+        if (data.error) {
+          call.reject(data.error);
+        } else {
+          call.resolve(data.result);
+        }
+        return;
+      }
+
+      // 接收插件参数
+      if (data.type === "plugin-params") {
+        var p = data.params;
+        paramsEl.innerHTML =
+          "query: <code>" + (p.query || "无") + "</code><br>" +
+          "contextText: <code>" + (p.contextText || "无") + "</code>";
+      }
+    });
+
+    // 剪贴板
+    document.getElementById("writeClip").addEventListener("click", function() {
+      invoke("aq_clipboard_write", { text: "Hello from ActionQuick!" })
+        .then(function() { clipResultEl.textContent = "已写入剪贴板"; })
+        .catch(function(e) { clipResultEl.textContent = "错误: " + e; });
+    });
+
+    document.getElementById("readClip").addEventListener("click", function() {
+      invoke("aq_clipboard_read")
+        .then(function(text) { clipResultEl.textContent = "剪贴板: " + text; })
+        .catch(function(e) { clipResultEl.textContent = "错误: " + e; });
+    });
+
+    // 通知
+    document.getElementById("notify").addEventListener("click", function() {
+      invoke("aq_notification", { title: "ActionQuick", body: "来自示例插件的通知" })
+        .then(function() { notifyResultEl.textContent = "通知已发送"; })
+        .catch(function(e) { notifyResultEl.textContent = "错误: " + e; });
+    });
+
+    // KV 存储
+    document.getElementById("storageSet").addEventListener("click", function() {
+      var key = document.getElementById("storageKey").value;
+      var value = document.getElementById("storageValue").value;
+      invoke("aq_storage_set", { key: key, value: value })
+        .then(function() { storageResultEl.textContent = "已写入: " + key + " = " + value; })
+        .catch(function(e) { storageResultEl.textContent = "错误: " + e; });
+    });
+
+    document.getElementById("storageGet").addEventListener("click", function() {
+      var key = document.getElementById("storageKey").value;
+      invoke("aq_storage_get", { key: key })
+        .then(function(value) { storageResultEl.textContent = "读取: " + key + " = " + JSON.stringify(value); })
+        .catch(function(e) { storageResultEl.textContent = "错误: " + e; });
+    });
+
+    document.getElementById("storageKeys").addEventListener("click", function() {
+      invoke("aq_storage_keys")
+        .then(function(keys) { storageResultEl.textContent = "所有 key: " + JSON.stringify(keys); })
+        .catch(function(e) { storageResultEl.textContent = "错误: " + e; });
+    });
+
+    // HTTP
+    document.getElementById("httpGet").addEventListener("click", function() {
+      httpResultEl.textContent = "请求中...";
+      invoke("aq_http_get", { url: "https://httpbin.org/get" })
+        .then(function(text) { httpResultEl.textContent = text.substring(0, 200) + "..."; })
+        .catch(function(e) { httpResultEl.textContent = "错误: " + e; });
+    });
+  </script>
+</body>
+</html>
