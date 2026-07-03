@@ -45,6 +45,6 @@ watch(
 .app-root {
   height: 100vh;
   width: 100vw;
-  padding: 8px;
+  padding: 0;
 }
 </style>
