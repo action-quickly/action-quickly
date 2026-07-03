@@ -1,3 +1,6 @@
 [submodule "community"]
 	path = community
 	url = https://github.com/action-quickly/awsome-plugins.git
+[submodule "examples/plugins/json-formatter"]
+	path = examples/plugins/json-formatter
+	url = https://github.com/action-quickly/aq-json-formatter.git
