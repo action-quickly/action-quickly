@@ -7,3 +7,12 @@
 [submodule "examples/plugins/translator"]
 	path = examples/plugins/translator
 	url = https://github.com/action-quickly/aq-translator.git
+[submodule "examples/plugins/timestamp"]
+	path = examples/plugins/timestamp
+	url = https://github.com/action-quickly/aq-timestamp.git
+[submodule "examples/plugins/color-picker"]
+	path = examples/plugins/color-picker
+	url = https://github.com/action-quickly/aq-color-picker.git
+[submodule "examples/plugins/base64"]
+	path = examples/plugins/base64
+	url = https://github.com/action-quickly/aq-base64.git
