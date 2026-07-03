@@ -145,12 +145,12 @@ async function saveConfig() {
               v-for="group in colorGroups"
               :key="group"
               class="theme-pill"
-              :class="{ active: appStore.theme.includes(group) }"
+              :class="{ active: themes.find(t => t.id === appStore.theme)?.label === group }"
               @click="switchColorGroup(group)"
             >
               <span
                 class="theme-dot"
-                :style="{ background: themes.find(t => t.label === group && appStore.theme.includes(t.mode))?.color }"
+                :style="{ background: themes.find(t => t.label === group && t.mode === (appStore.theme.endsWith('-light') ? 'light' : 'dark'))?.color }"
               ></span>
               {{ group }}
             </button>
@@ -279,43 +279,43 @@ async function saveConfig() {
 </template>
 
 <style scoped>
-.market-view { height: 100%; background: var(--bg-color); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; }
-.market-header { display: flex; align-items: center; padding: 0 16px; height: 48px; border-bottom: 1px solid var(--border-color); gap: 12px; }
-.back-btn, .refresh-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 14px; padding: 4px 8px; border-radius: 4px; font-family: inherit; }
-.back-btn:hover, .refresh-btn:hover { background: var(--bg-hover); color: var(--text-color); }
+.market-view { height: 100%; background: var(--bg-surface); border-radius: var(--radius); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); overflow: hidden; display: flex; flex-direction: column; }
+.market-header { display: flex; align-items: center; padding: 0 16px; height: 48px; border-bottom: 1px solid var(--border); gap: 12px; }
+.back-btn, .refresh-btn { background: none; border: none; color: var(--tx-secondary); cursor: pointer; font-size: 14px; padding: 4px 8px; border-radius: 4px; font-family: inherit; }
+.back-btn:hover, .refresh-btn:hover { background: var(--bg-hover); color: var(--tx-primary); }
 .title { font-size: 14px; font-weight: 500; flex: 1; }
 .tabs { display: flex; gap: 4px; }
-.tab { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 13px; padding: 4px 12px; border-radius: 4px; font-family: inherit; }
-.tab.active { background: var(--accent-bg); color: var(--accent-color); }
+.tab { background: none; border: none; color: var(--tx-secondary); cursor: pointer; font-size: 13px; padding: 4px 12px; border-radius: 4px; font-family: inherit; }
+.tab.active { background: var(--accent-bg); color: var(--accent); }
 .tab:hover { background: var(--bg-hover); }
 .market-body { flex: 1; overflow-y: auto; padding: 16px; }
 .install-section, .community-section, .settings-section { margin-bottom: 24px; }
-h3 { font-size: 14px; margin-bottom: 8px; color: var(--text-color); }
+h3 { font-size: 14px; margin-bottom: 8px; color: var(--tx-primary); }
 .install-row { display: flex; gap: 8px; }
-.path-input, .setting-input { flex: 1; background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; color: var(--text-color); font-size: 13px; font-family: inherit; outline: none; }
-.path-input:focus, .setting-input:focus { border-color: var(--accent-color); }
-.install-row button { background: var(--accent-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; }
+.path-input, .setting-input { flex: 1; background: var(--bg-hover); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--tx-primary); font-size: 13px; font-family: inherit; outline: none; }
+.path-input:focus, .setting-input:focus { border-color: var(--accent); }
+.install-row button { background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; }
 .install-row button:hover { opacity: 0.9; }
-.message { margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
-.empty { color: var(--text-secondary); font-size: 13px; padding: 16px 0; }
+.message { margin-top: 8px; font-size: 12px; color: var(--tx-secondary); }
+.empty { color: var(--tx-secondary); font-size: 13px; padding: 16px 0; }
 .plugin-list { display: flex; flex-direction: column; gap: 8px; }
 .plugin-card { display: flex; align-items: center; padding: 12px; background: var(--bg-hover); border-radius: 8px; gap: 12px; }
 .plugin-info { flex: 1; min-width: 0; }
 .plugin-name { font-size: 14px; font-weight: 500; }
-.version { font-size: 11px; color: var(--text-secondary); font-weight: normal; }
-.plugin-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-.plugin-perms { font-size: 11px; color: var(--accent-color); margin-top: 4px; }
+.version { font-size: 11px; color: var(--tx-secondary); font-weight: normal; }
+.plugin-desc { font-size: 12px; color: var(--tx-secondary); margin-top: 2px; }
+.plugin-perms { font-size: 11px; color: var(--accent); margin-top: 4px; }
 .uninstall-btn { background: rgba(255,80,80,0.2); color: #ff6464; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; }
 .uninstall-btn:hover { background: rgba(255,80,80,0.3); }
-.install-btn { background: var(--accent-color); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; }
+.install-btn { background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; }
 .install-btn:hover { opacity: 0.9; }
 .install-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .installed-btn { background: rgba(100,200,100,0.2); color: #64c864; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-family: inherit; }
 .community-header { display: flex; align-items: center; justify-content: space-between; }
 .setting-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-.setting-row label { font-size: 13px; color: var(--text-color); width: 120px; flex-shrink: 0; }
-.setting-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent-color); }
-.save-btn { background: var(--accent-color); color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; margin-top: 8px; }
+.setting-row label { font-size: 13px; color: var(--tx-primary); width: 120px; flex-shrink: 0; }
+.setting-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.save-btn { background: var(--accent); color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; margin-top: 8px; }
 .save-btn:hover { opacity: 0.9; }
 
 .section { margin-bottom: 20px; }

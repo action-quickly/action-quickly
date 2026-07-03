@@ -1,13 +1,32 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import type { ViewType } from "../types/plugin";
+
+export type ThemeId =
+  | "violet-dark" | "violet-light"
+  | "amber-dark" | "amber-light"
+  | "indigo-dark" | "indigo-light";
+
+function loadTheme(): ThemeId {
+  if (typeof localStorage !== "undefined") {
+    const stored = localStorage.getItem("action-quick-theme");
+    if (stored && ["violet-dark","violet-light","amber-dark","amber-light","indigo-dark","indigo-light"].includes(stored)) {
+      return stored as ThemeId;
+    }
+  }
+  return "violet-dark";
+}
 
 export const useAppStore = defineStore("app", () => {
   const currentView = ref<ViewType>("search");
   const searchQuery = ref("");
   const contextText = ref<string | null>(null);
   const selectedPluginId = ref<string | null>(null);
-  const theme = ref("violet-dark");
+  const theme = ref<ThemeId>(loadTheme());
+
+  watch(theme, (val) => {
+    try { localStorage.setItem("action-quick-theme", val); } catch {}
+  });
 
   function switchView(view: ViewType) {
     currentView.value = view;
@@ -31,7 +50,7 @@ export const useAppStore = defineStore("app", () => {
     selectedPluginId.value = null;
   }
 
-  function setTheme(id: string) {
+  function setTheme(id: ThemeId) {
     theme.value = id;
   }
 
