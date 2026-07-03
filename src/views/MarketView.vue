@@ -92,7 +92,7 @@ async function loadCommunity() {
   communityLoading.value = true;
   try {
     const url = configStore.config.plugin_source ||
-      "https://raw.githubusercontent.com/action-quick/plugins/main/index.json";
+      "https://raw.githubusercontent.com/action-quickly/awsome-plugins/refs/heads/main/index.json";
     communityPlugins.value = await pluginApi.fetchCommunityIndex(url);
   } catch (e) {
     message.value = "加载社区索引失败: " + e;
@@ -104,7 +104,7 @@ async function loadCommunity() {
 async function installFromCommunity(plugin: CommunityPlugin) {
   installing.value = plugin.id;
   try {
-    await pluginApi.downloadAndInstall(plugin.download);
+    await pluginApi.downloadAndInstall(pluginApi.buildDownloadUrl(plugin));
     await pluginStore.loadPlugins();
     message.value = "安装成功: " + plugin.name;
   } catch (e) {

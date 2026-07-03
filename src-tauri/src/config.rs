@@ -16,7 +16,7 @@ impl Default for AppConfig {
             shortcut: "Alt+Space".to_string(),
             theme: "system".to_string(),
             developer_mode: false,
-            plugin_source: "https://raw.githubusercontent.com/action-quickly/awsome-plugins/main/index.json".to_string(),
+            plugin_source: "https://raw.githubusercontent.com/action-quickly/awsome-plugins/refs/heads/main/index.json".to_string(),
         }
     }
 }
