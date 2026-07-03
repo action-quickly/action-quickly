@@ -2,11 +2,15 @@ use tauri::{AppHandle, Manager, Window, Emitter};
 use tauri::plugin::TauriPlugin;
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
 
+/// 主程序版本（从 Cargo.toml 读取）
+pub const HOST_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 mod plugin;
 mod permission;
 mod context;
 mod commands;
 mod config;
+mod version;
 
 use plugin::manager::PluginManager;
 use plugin::manifest::{InstalledPlugin, PluginManifest};

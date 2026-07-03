@@ -140,6 +140,14 @@ impl PluginManager {
         manifest.validate_permissions()
             .map_err(InstallError::ManifestError)?;
 
+        // 检查主程序版本兼容性
+        if !crate::version::is_host_compatible(crate::HOST_VERSION, &manifest.min_host_version) {
+            return Err(InstallError::IncompatibleHost {
+                required: manifest.min_host_version.clone(),
+                current: crate::HOST_VERSION.to_string(),
+            });
+        }
+
         // 移动到正式目录
         let plugin_dir = self.plugins_dir().join(&manifest.id);
         // 如果已存在则先删除（覆盖安装）
@@ -206,6 +214,36 @@ impl PluginManager {
         }
         None
     }
+
+    /// 从 zip 文件中读取 plugin.json（不解压全量）
+    pub fn read_manifest_from_zip(zip_path: &Path) -> Result<PluginManifest, InstallError> {
+        let file = std::fs::File::open(zip_path)
+            .map_err(|e| InstallError::IoError(e.to_string()))?;
+        let mut archive = zip::ZipArchive::new(file)
+            .map_err(|e| InstallError::ZipError(e.to_string()))?;
+
+        // 查找 plugin.json
+        for i in 0..archive.len() {
+            let name = {
+                let file = archive.by_index(i)
+                    .map_err(|e| InstallError::ZipError(e.to_string()))?;
+                file.name().to_string()
+            };
+
+            // 匹配根目录或一级子目录的 plugin.json
+            if name == "plugin.json" || name.ends_with("/plugin.json") {
+                let mut content = String::new();
+                use std::io::Read;
+                let mut file = archive.by_index(i)
+                    .map_err(|e| InstallError::ZipError(e.to_string()))?;
+                file.read_to_string(&mut content)
+                    .map_err(|e| InstallError::IoError(e.to_string()))?;
+                return PluginManifest::from_json(&content)
+                    .map_err(InstallError::ManifestError);
+            }
+        }
+        Err(InstallError::ManifestNotFound)
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -218,6 +256,8 @@ pub enum InstallError {
     ManifestNotFound,
     #[error("清单错误: {0}")]
     ManifestError(ManifestError),
+    #[error("插件需要主程序 v{required}+，当前 v{current}，请先更新主程序")]
+    IncompatibleHost { required: String, current: String },
 }
 
 /// 生成一个简单的伪 UUID（不依赖 uuid crate）
