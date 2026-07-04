@@ -118,6 +118,30 @@ function isInstalled(pluginId: string): boolean {
   return pluginStore.plugins.some((p) => p.id === pluginId);
 }
 
+function getInstalledVersion(pluginId: string): string | null {
+  const plugin = pluginStore.plugins.find((p) => p.id === pluginId);
+  return plugin ? plugin.version : null;
+}
+
+function hasUpdate(community: CommunityPlugin): boolean {
+  const installed = getInstalledVersion(community.id);
+  if (!installed) return false;
+  return compareVersions(community.version, installed) > 0;
+}
+
+function compareVersions(a: string, b: string): number {
+  const parse = (v: string) => v.replace(/^v/, "").split(".").map((s) => parseInt(s.trim()) || 0);
+  const va = parse(a);
+  const vb = parse(b);
+  for (let i = 0; i < Math.max(va.length, vb.length); i++) {
+    const na = va[i] || 0;
+    const nb = vb[i] || 0;
+    if (na < nb) return -1;
+    if (na > nb) return 1;
+  }
+  return 0;
+}
+
 async function saveConfig() {
   await configStore.save(editConfig.value);
   message.value = "配置已保存";
@@ -230,10 +254,16 @@ async function saveConfig() {
                 <div class="plugin-perms">{{ p.tags.join(" · ") }}</div>
               </div>
               <button
-                v-if="isInstalled(p.id)"
+                v-if="isInstalled(p.id) && !hasUpdate(p)"
                 class="installed-btn"
                 disabled
               >已安装</button>
+              <button
+                v-else-if="isInstalled(p.id) && hasUpdate(p)"
+                class="update-btn"
+                @click="installFromCommunity(p)"
+                :disabled="installing === p.id"
+              >{{ installing === p.id ? "更新中..." : "更新" }}</button>
               <button
                 v-else
                 class="install-btn"
@@ -311,6 +341,9 @@ h3 { font-size: 14px; margin-bottom: 8px; color: var(--tx-primary); }
 .install-btn:hover { opacity: 0.9; }
 .install-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .installed-btn { background: rgba(100,200,100,0.2); color: #64c864; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-family: inherit; }
+.update-btn { background: rgba(255,200,100,0.2); color: #ffc864; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: inherit; }
+.update-btn:hover { background: rgba(255,200,100,0.3); }
+.update-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .community-header { display: flex; align-items: center; justify-content: space-between; }
 .setting-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
 .setting-row label { font-size: 13px; color: var(--tx-primary); width: 120px; flex-shrink: 0; }
