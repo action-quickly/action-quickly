@@ -34,7 +34,7 @@ const themes = [
   { id: "amber-light", label: "琥珀", mode: "light", color: "#d97706" },
   { id: "indigo-dark", label: "靛蓝", mode: "dark", color: "#6366f1" },
   { id: "indigo-light", label: "靛蓝", mode: "light", color: "#4f46e5" },
-];
+] as const;
 
 const colorGroups = ["紫罗兰", "琥珀", "靛蓝"];
 
