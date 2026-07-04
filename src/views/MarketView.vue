@@ -50,6 +50,14 @@ function switchMode(mode: string) {
   if (match) appStore.setTheme(match.id);
 }
 
+function applySystemTheme() {
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const currentGroup = themes.find(t => t.id === appStore.theme)?.label || "紫罗兰";
+  const mode = prefersDark ? 'dark' : 'light';
+  const match = themes.find(t => t.label === currentGroup && t.mode === mode);
+  if (match) appStore.setTheme(match.id);
+}
+
 onMounted(async () => {
   await Promise.all([
     pluginStore.loadPlugins(),
@@ -161,49 +169,6 @@ async function saveConfig() {
     </div>
 
     <div class="market-body">
-      <section class="section">
-        <h2 class="section-title">主题</h2>
-        <div class="theme-selector">
-          <div class="theme-colors">
-            <button
-              v-for="group in colorGroups"
-              :key="group"
-              class="theme-pill"
-              :class="{ active: themes.find(t => t.id === appStore.theme)?.label === group }"
-              @click="switchColorGroup(group)"
-            >
-              <span
-                class="theme-dot"
-                :style="{ background: themes.find(t => t.label === group && t.mode === (appStore.theme.endsWith('-light') ? 'light' : 'dark'))?.color }"
-              ></span>
-              {{ group }}
-            </button>
-          </div>
-          <div class="theme-modes">
-            <button
-              class="mode-pill"
-              :class="{ active: appStore.theme.endsWith('-dark') }"
-              @click="switchMode('dark')"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-              </svg>
-              暗色
-            </button>
-            <button
-              class="mode-pill"
-              :class="{ active: appStore.theme.endsWith('-light') }"
-              @click="switchMode('light')"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="5"/>
-                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-              </svg>
-              亮色
-            </button>
-          </div>
-        </div>
-      </section>
       <!-- 已安装 -->
       <template v-if="activeTab === 'plugins'">
         <div class="install-section">
@@ -279,18 +244,56 @@ async function saveConfig() {
       <!-- 设置 -->
       <template v-if="activeTab === 'settings'">
         <div class="settings-section">
-          <h3>通用设置</h3>
+          <h3>外观</h3>
+          <div class="setting-row">
+            <label>配色</label>
+            <div class="color-pills">
+              <button
+                v-for="group in colorGroups"
+                :key="group"
+                class="theme-pill"
+                :class="{ active: themes.find(t => t.id === appStore.theme)?.label === group }"
+                @click="switchColorGroup(group)"
+              >
+                <span
+                  class="theme-dot"
+                  :style="{ background: themes.find(t => t.label === group && t.mode === (appStore.theme.endsWith('-light') ? 'light' : 'dark'))?.color }"
+                ></span>
+                {{ group }}
+              </button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <label>深色浅色跟随系统</label>
+            <div class="mode-pills">
+              <button
+                class="mode-pill"
+                :class="{ active: editConfig.theme === 'light' }"
+                @click="editConfig.theme = 'light'; switchMode('light')"
+              >
+                浅色
+              </button>
+              <button
+                class="mode-pill"
+                :class="{ active: editConfig.theme === 'dark' }"
+                @click="editConfig.theme = 'dark'; switchMode('dark')"
+              >
+                深色
+              </button>
+              <button
+                class="mode-pill"
+                :class="{ active: editConfig.theme === 'system' }"
+                @click="editConfig.theme = 'system'; applySystemTheme()"
+              >
+                跟随系统
+              </button>
+            </div>
+          </div>
+
+          <h3 style="margin-top: 24px;">通用设置</h3>
           <div class="setting-row">
             <label>快捷键</label>
             <input v-model="editConfig.shortcut" class="setting-input" />
-          </div>
-          <div class="setting-row">
-            <label>主题</label>
-            <select v-model="editConfig.theme" class="setting-input">
-              <option value="system">跟随系统</option>
-              <option value="light">浅色</option>
-              <option value="dark">深色</option>
-            </select>
           </div>
           <div class="setting-row">
             <label>开发者模式</label>
@@ -354,19 +357,7 @@ h3 { font-size: 14px; margin-bottom: 8px; color: var(--tx-primary); }
 .section { margin-bottom: 20px; }
 .section-title { font-size: 14px; font-weight: 500; margin-bottom: 10px; color: var(--tx-primary); }
 
-/* Theme selector */
-.theme-selector {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.theme-colors {
-  display: flex;
-  gap: 6px;
-}
-
+/* Theme pills in settings */
 .theme-pill {
   display: flex;
   align-items: center;
@@ -401,38 +392,38 @@ h3 { font-size: 14px; margin-bottom: 8px; color: var(--tx-primary); }
   flex-shrink: 0;
 }
 
-.theme-modes {
+.color-pills, .mode-pills {
   display: flex;
-  gap: 4px;
-  background: var(--bg-raised);
-  border-radius: 20px;
-  padding: 3px;
-  border: 1px solid var(--border);
+  gap: 6px;
+  flex: 1;
 }
 
 .mode-pill {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  background: transparent;
-  border: none;
-  color: var(--tx-muted);
-  padding: 4px 10px;
-  border-radius: 16px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--tx-secondary);
+  padding: 6px 14px;
+  border-radius: 20px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-family: inherit;
   font-weight: 500;
   transition: all var(--transition-fast);
+  flex: 1;
+}
+
+.mode-pill:hover {
+  border-color: var(--accent);
+  color: var(--tx-primary);
 }
 
 .mode-pill.active {
-  background: var(--bg-surface);
-  color: var(--tx-primary);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.mode-pill:hover:not(.active) {
-  color: var(--tx-secondary);
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-text);
 }
 </style>
