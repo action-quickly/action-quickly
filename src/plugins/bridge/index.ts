@@ -18,16 +18,26 @@ export class PluginBridgeImpl implements AQBridge {
 
   private setupMessageListener() {
     window.addEventListener('message', (e: MessageEvent<AQMessage>) => {
-      if (e.data?.source === 'action-quick-host' && e.data.id) {
-        const pending = this.pendingCalls.get(e.data.id);
-        if (pending) {
-          if (e.data.error) {
-            pending.reject(new Error(e.data.error));
-          } else {
-            pending.resolve(e.data.result);
+      if (e.data?.source !== 'action-quick-host' || !e.data.id) return;
+
+      if (e.data.type === 'event' && e.data.event) {
+        const listeners = this.eventListeners.get(e.data.event);
+        if (listeners) {
+          for (const listener of listeners) {
+            listener(e.data.data);
           }
-          this.pendingCalls.delete(e.data.id);
         }
+        return;
+      }
+
+      const pending = this.pendingCalls.get(e.data.id);
+      if (pending) {
+        if (e.data.error) {
+          pending.reject(new Error(e.data.error));
+        } else {
+          pending.resolve(e.data.result);
+        }
+        this.pendingCalls.delete(e.data.id);
       }
     });
   }
@@ -63,6 +73,14 @@ export class PluginBridgeImpl implements AQBridge {
       event,
       data,
     } as AQMessage, '*');
+  }
+
+  destroy(): void {
+    for (const { reject } of this.pendingCalls.values()) {
+      reject(new Error('Bridge destroyed'));
+    }
+    this.pendingCalls.clear();
+    this.eventListeners.clear();
   }
 
   get clipboard() {
