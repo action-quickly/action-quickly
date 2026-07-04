@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useAppStore } from "../stores/appStore";
 import { usePluginStore } from "../stores/pluginStore";
 import { useConfigStore, type AppConfig } from "../stores/configStore";
@@ -17,6 +17,8 @@ const activeTab = ref<"plugins" | "community" | "settings">("plugins");
 const communityPlugins = ref<CommunityPlugin[]>([]);
 const communityLoading = ref(false);
 const installing = ref<string | null>(null);
+const communitySearch = ref("");
+const selectedTags = ref<string[]>([]);
 
 const editConfig = ref<AppConfig>({
   shortcut: "Alt+Space",
@@ -107,6 +109,42 @@ async function loadCommunity() {
   } finally {
     communityLoading.value = false;
   }
+}
+
+const allTags = computed(() => {
+  const tagSet = new Set<string>();
+  communityPlugins.value.forEach(p => p.tags.forEach(t => tagSet.add(t)));
+  return Array.from(tagSet);
+});
+
+const filteredCommunityPlugins = computed(() => {
+  let result = communityPlugins.value;
+  if (selectedTags.value.length > 0) {
+    result = result.filter(p => selectedTags.value.some(t => p.tags.includes(t)));
+  }
+  if (communitySearch.value.trim()) {
+    const query = communitySearch.value.toLowerCase().trim();
+    result = result.filter(p =>
+      p.name.toLowerCase().includes(query) ||
+      p.description.toLowerCase().includes(query) ||
+      p.author.toLowerCase().includes(query) ||
+      p.tags.some(t => t.toLowerCase().includes(query))
+    );
+  }
+  return result;
+});
+
+function toggleTag(tag: string) {
+  const idx = selectedTags.value.indexOf(tag);
+  if (idx === -1) {
+    selectedTags.value.push(tag);
+  } else {
+    selectedTags.value.splice(idx, 1);
+  }
+}
+
+function clearTagFilters() {
+  selectedTags.value = [];
 }
 
 async function installFromCommunity(plugin: CommunityPlugin) {
@@ -208,11 +246,39 @@ async function saveConfig() {
               {{ communityLoading ? "加载中..." : "刷新" }}
             </button>
           </div>
-          <div v-if="communityPlugins.length === 0 && !communityLoading" class="empty">
-            暂无社区插件，请检查插件源配置
+
+          <div class="community-search">
+            <input
+              v-model="communitySearch"
+              placeholder="搜索插件名称、描述、作者..."
+              class="search-input"
+            />
+          </div>
+
+          <div v-if="allTags.length > 0" class="community-tags">
+            <button
+              v-for="tag in allTags"
+              :key="tag"
+              class="tag-pill"
+              :class="{ active: selectedTags.includes(tag) }"
+              @click="toggleTag(tag)"
+            >
+              {{ tag }}
+            </button>
+            <button
+              v-if="selectedTags.length > 0"
+              class="clear-tags-btn"
+              @click="clearTagFilters"
+            >
+              清除筛选
+            </button>
+          </div>
+
+          <div v-if="filteredCommunityPlugins.length === 0 && !communityLoading" class="empty">
+            {{ communityPlugins.length === 0 ? "暂无社区插件，请检查插件源配置" : "没有匹配的插件" }}
           </div>
           <div v-else class="plugin-list">
-            <div v-for="p in communityPlugins" :key="p.id" class="plugin-card">
+            <div v-for="p in filteredCommunityPlugins" :key="p.id" class="plugin-card">
               <div class="plugin-info">
                 <div class="plugin-name">{{ p.name }} <span class="version">v{{ p.version }}</span></div>
                 <div class="plugin-desc">{{ p.description }}</div>
@@ -348,6 +414,74 @@ h3 { font-size: 14px; margin-bottom: 8px; color: var(--tx-primary); }
 .update-btn:hover { background: rgba(255,200,100,0.3); }
 .update-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .community-header { display: flex; align-items: center; justify-content: space-between; }
+
+.community-search {
+  margin-bottom: 12px;
+}
+
+.community-search .search-input {
+  width: 100%;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--tx-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+.community-search .search-input:focus {
+  border-color: var(--accent);
+}
+
+.community-search .search-input::placeholder {
+  color: var(--tx-muted);
+}
+
+.community-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tag-pill {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--tx-secondary);
+  padding: 4px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  transition: all var(--transition-fast);
+}
+
+.tag-pill:hover {
+  border-color: var(--accent);
+  color: var(--tx-primary);
+}
+
+.tag-pill.active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.clear-tags-btn {
+  background: none;
+  border: none;
+  color: var(--tx-muted);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+}
+
+.clear-tags-btn:hover {
+  color: var(--tx-primary);
+}
 .setting-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
 .setting-row label { font-size: 13px; color: var(--tx-primary); width: 120px; flex-shrink: 0; }
 .setting-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
