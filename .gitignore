@@ -9,9 +9,14 @@ lerna-debug.log*
 
 node_modules
 dist
-.agents/
 dist-ssr
 *.local
+
+# Rust / Tauri
+src-tauri/target/
+
+# Agents
+.agents/
 
 # Editor directories and files
 .vscode/
