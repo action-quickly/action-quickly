@@ -4,16 +4,7 @@ import type { SearchResultItem } from "../types/plugin";
 const LAYER_CALC = 1; // L1 layer per spec
 
 // Configure math.js with degree mode for trigonometric functions
-const math = create(all, {
-  // Default angle unit: degrees (sin(90) = 1)
-  // math.js uses radians by default, so we handle conversion ourselves
-});
-
-// Constants
-const CONSTANTS: Record<string, number> = {
-  pi: Math.PI,
-  e: Math.E,
-};
+const math = create(all, {});
 
 // Math function names that indicate a calculator expression
 const MATH_FUNCTIONS = [
@@ -99,15 +90,43 @@ function preprocessExpression(expr: string): string {
 }
 
 /**
- * Wrap trigonometric function arguments for degree mode.
- * sin(30) -> sin(30 deg) to tell math.js to use degrees.
+ * Post-process the expression to enable degree mode for sin/cos/tan.
+ * We use math.js unit syntax: sin(x deg) instead of sin(x).
  */
-function wrapDegMode(expr: string): string {
-  // Replace trig function calls to use degree unit
-  return expr.replace(
-    /\b(sin|cos|tan|asin|acos|atan)\s*\(/g,
-    "$1("
-  );
+function enableDegreeMode(expr: string): string {
+  // Wrap sin/cos/tan argument with " deg" unit suffix
+  // This needs to handle nested parens: sin(30+15) -> sin((30+15) deg)
+  // Strategy: find sin( / cos( / tan( and insert " deg" before the matching )
+  const trigFuncs = ["sin", "cos", "tan"];
+
+  for (const fn of trigFuncs) {
+    const replacements: Array<{ index: number; closeParenIndex: number }> = [];
+
+    // Find all occurrences
+    const re = new RegExp(`\\b${fn}\\(`, "g");
+    let match;
+    while ((match = re.exec(expr)) !== null) {
+      const openIdx = match.index + fn.length + 1; // position after (
+      // Find matching close paren
+      let depth = 1;
+      let closeIdx = openIdx;
+      while (depth > 0 && closeIdx < expr.length) {
+        if (expr[closeIdx] === "(") depth++;
+        else if (expr[closeIdx] === ")") depth--;
+        closeIdx++;
+      }
+      closeIdx--; // position of matching )
+      replacements.push({ index: match.index, closeParenIndex: closeIdx });
+    }
+
+    // Apply replacements from right to left to preserve indices
+    for (let i = replacements.length - 1; i >= 0; i--) {
+      const { closeParenIndex } = replacements[i];
+      expr = expr.slice(0, closeParenIndex) + " deg" + expr.slice(closeParenIndex);
+    }
+  }
+
+  return expr;
 }
 
 /**
@@ -151,7 +170,8 @@ export function searchCalculator(query: string): SearchResultItem | null {
   if (!query || !isMathExpression(query)) return null;
 
   try {
-    const processed = preprocessExpression(query);
+    let processed = preprocessExpression(query);
+    processed = enableDegreeMode(processed);
     const result = math.evaluate(processed);
 
     // Format result
