@@ -15,8 +15,8 @@
       {
         "label": "main",
         "title": "ActionQuick",
-        "width": 750,
-        "height": 500,
+        "width": 850,
+        "height": 560,
         "resizable": false,
         "decorations": false,
         "transparent": true,
