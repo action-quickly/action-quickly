@@ -22,6 +22,7 @@ impl PluginManager {
     }
 
     /// 获取数据存储目录 ~/.action-quick/storage/
+    #[allow(dead_code)]
     pub fn storage_dir(&self) -> PathBuf {
         let base = self.app.path().home_dir().unwrap_or_else(|_| {
             dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
@@ -216,6 +217,7 @@ impl PluginManager {
     }
 
     /// 从 zip 文件中读取 plugin.json（不解压全量）
+    #[allow(dead_code)]
     pub fn read_manifest_from_zip(zip_path: &Path) -> Result<PluginManifest, InstallError> {
         let file = std::fs::File::open(zip_path)
             .map_err(|e| InstallError::IoError(e.to_string()))?;

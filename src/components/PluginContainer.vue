@@ -5,11 +5,11 @@
       @retry="loadPlugin"
       @close="handleClose"
     >
+      <div ref="pluginRoot" class="plugin-root" />
       <div v-if="loading" class="plugin-loading">
         <div class="loading-spinner"></div>
         <span>加载插件中...</span>
       </div>
-      <div v-else ref="pluginRoot" class="plugin-root" />
     </PluginErrorBoundary>
   </div>
 </template>
@@ -21,6 +21,7 @@ import PluginErrorBoundary from './PluginErrorBoundary.vue';
 import { LightIsolation } from '../plugins/isolation/light';
 import { injectGlobalAPI, removeGlobalAPI } from '../plugins/bridge/global-api';
 import { HTMLPluginRenderer } from '../plugins/renderer/html-renderer';
+import type { PluginParams } from '../plugins/renderer/html-renderer';
 import type { IsolatedContainer } from '../plugins/isolation/types';
 import type { InstalledPlugin } from '../types/plugin';
 import type { PluginRenderer } from '../plugins/renderer/types';
@@ -63,6 +64,17 @@ async function loadPlugin() {
     injectGlobalAPI(container, props.pluginId);
 
     renderer = new HTMLPluginRenderer();
+
+    // 设置 Escape 键回调（返回搜索页）
+    (renderer as HTMLPluginRenderer).onEscape = () => emit('close');
+
+    // 设置插件参数（兼容旧格式）
+    if (props.params) {
+      (renderer as HTMLPluginRenderer).setParams({
+        query: props.params.query,
+        contextText: props.params.contextText,
+      });
+    }
 
     await renderer.render(container, plugin, {
       pluginId: props.pluginId,

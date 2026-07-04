@@ -81,6 +81,8 @@ pub fn run() {
             install_plugin_from_dir,
             uninstall_plugin,
             get_plugin_url,
+            get_plugin,
+            read_plugin_main,
             get_selected_text,
             aq_download_plugin,
             list_desktop_apps,
@@ -194,6 +196,27 @@ fn uninstall_plugin(app: AppHandle, plugin_id: String) -> Result<(), String> {
     perm_store.remove_permissions(&plugin_id).map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+/// 获取插件完整信息
+#[tauri::command]
+fn get_plugin(app: AppHandle, plugin_id: String) -> Result<InstalledPlugin, String> {
+    let manager = PluginManager::new(app.clone());
+    manager
+        .get_plugin(&plugin_id)
+        .ok_or(format!("插件未找到: {}", plugin_id))
+}
+
+/// 读取插件主文件内容
+#[tauri::command]
+fn read_plugin_main(app: AppHandle, plugin_id: String) -> Result<String, String> {
+    let manager = PluginManager::new(app.clone());
+    let plugin = manager
+        .get_plugin(&plugin_id)
+        .ok_or(format!("插件未找到: {}", plugin_id))?;
+    let full_path = std::path::Path::new(&plugin.path).join(&plugin.manifest.main);
+    std::fs::read_to_string(&full_path)
+        .map_err(|e| format!("读取插件文件失败: {}", e))
 }
 
 /// 获取插件的 asset protocol URL

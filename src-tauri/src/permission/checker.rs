@@ -2,10 +2,12 @@ use crate::permission::store::PermissionStore;
 use tauri::{AppHandle, WebviewWindow};
 
 /// 权限校验器
+#[allow(dead_code)]
 pub struct PermissionChecker {
     app: AppHandle,
 }
 
+#[allow(dead_code)]
 impl PermissionChecker {
     pub fn new(app: AppHandle) -> Self {
         Self { app }
@@ -50,6 +52,7 @@ impl PermissionChecker {
 
 #[derive(Debug, thiserror::Error)]
 #[error("插件 {plugin_id} 未授权权限: {permission}")]
+#[allow(dead_code)]
 pub struct PermissionDenied {
     pub plugin_id: String,
     pub permission: String,

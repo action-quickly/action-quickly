@@ -4,8 +4,20 @@ import type { PluginBridge } from '../isolation/types';
 import type { PluginRenderer } from './types';
 import { PLUGIN_SDK_VERSION } from '../bridge/global-api';
 
+export interface PluginParams {
+  query?: string | null;
+  contextText?: string | null;
+}
+
 export class HTMLPluginRenderer implements PluginRenderer {
   private iframe: HTMLIFrameElement | null = null;
+  private params: PluginParams = {};
+  private messageHandler: ((e: MessageEvent) => void) | null = null;
+  onEscape?: () => void;
+
+  setParams(params: PluginParams): void {
+    this.params = params;
+  }
 
   async render(
     container: IsolatedContainer,
@@ -29,8 +41,8 @@ export class HTMLPluginRenderer implements PluginRenderer {
   }
 
   private async loadHTMLContent(plugin: InstalledPlugin): Promise<string> {
-    const response = await fetch(`asset://localhost/${plugin.path}/${plugin.main}`);
-    return response.text();
+    const { invoke } = await import('@tauri-apps/api/core');
+    return invoke<string>('read_plugin_main', { pluginId: plugin.id });
   }
 
   private injectSDK(html: string, bridge: PluginBridge): string {
@@ -68,19 +80,34 @@ export class HTMLPluginRenderer implements PluginRenderer {
     if (!this.iframe?.contentWindow) return;
 
     // 监听插件消息
-    window.addEventListener('message', (e: MessageEvent) => {
-      if (e.data?.source === 'action-quick-plugin' && e.data.cmd) {
+    this.messageHandler = (e: MessageEvent) => {
+      if (e.data?.source !== 'action-quick-plugin') return;
+      if (e.data.type === 'key-escape') {
+        this.onEscape?.();
+        return;
+      }
+      if (e.data.cmd) {
         this.handlePluginCommand(e.data, bridge);
       }
-    });
+    };
+    window.addEventListener('message', this.messageHandler);
 
-    // 发送插件参数
+    // 发送插件参数（兼容旧格式）
     this.iframe.contentWindow.postMessage({
       source: 'action-quick-host',
       type: 'plugin-params',
       params: {
         pluginId: bridge.pluginId,
+        query: this.params.query || null,
+        contextText: this.params.contextText || null,
       },
+    }, '*');
+
+    // 发送 aq-init-bridge 消息作为备用（兼容旧插件）
+    this.iframe.contentWindow.postMessage({
+      source: 'action-quick-host',
+      type: 'aq-init-bridge',
+      script: `window.__AQ_BRIDGE__ = true;`,
     }, '*');
   }
 
@@ -104,6 +131,10 @@ export class HTMLPluginRenderer implements PluginRenderer {
   }
 
   destroy(): void {
+    if (this.messageHandler) {
+      window.removeEventListener('message', this.messageHandler);
+      this.messageHandler = null;
+    }
     this.iframe?.remove();
     this.iframe = null;
   }

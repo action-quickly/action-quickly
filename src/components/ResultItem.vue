@@ -18,6 +18,7 @@ const iconUrl = computed(() => {
   if (props.item.icon.startsWith("data:") || props.item.icon.startsWith("http")) {
     return props.item.icon;
   }
+  // Plugin icons are relative to the plugin's base path
   if (props.item.path) {
     const basePath = props.item.path.replace(/\\/g, "/");
     const fullPath = `${basePath}/${props.item.icon}`;
