@@ -27,8 +27,8 @@ describe('PluginBridgeImpl', () => {
   });
 
   describe('invoke', () => {
-    it('should send message to parent', () => {
-      bridge.invoke('test-cmd', { arg: 'value' });
+    it('should send message to parent', async () => {
+      const promise = bridge.invoke('test-cmd', { arg: 'value' });
 
       expect(postMessageSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -39,6 +39,18 @@ describe('PluginBridgeImpl', () => {
         }),
         '*'
       );
+
+      const messageEvent = new MessageEvent('message', {
+        data: {
+          source: 'action-quick-host',
+          type: 'response',
+          id: '1',
+          result: 'success',
+        },
+      });
+      window.dispatchEvent(messageEvent);
+
+      await promise;
     });
 
     it('should resolve when response received', async () => {
@@ -158,11 +170,28 @@ describe('PluginBridgeImpl', () => {
 
       expect(callback).not.toHaveBeenCalled();
     });
+
+    it('should remove window message listener on destroy', () => {
+      const addSpy = vi.spyOn(window, 'addEventListener');
+      const removeSpy = vi.spyOn(window, 'removeEventListener');
+
+      const newBridge = new PluginBridgeImpl('test-plugin-2');
+      expect(addSpy).toHaveBeenCalledWith('message', expect.any(Function));
+
+      const addedHandler = addSpy.mock.calls.find(
+        (call) => call[0] === 'message'
+      )?.[1] as EventListener;
+
+      newBridge.destroy();
+
+      expect(removeSpy).toHaveBeenCalledWith('message', addedHandler);
+    });
   });
 
   describe('clipboard', () => {
-    it('should invoke clipboard read', () => {
-      bridge.clipboard.read();
+    it('should invoke clipboard read', async () => {
+      const promise = bridge.clipboard.read();
+      bridge.destroy();
 
       expect(postMessageSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -170,10 +199,13 @@ describe('PluginBridgeImpl', () => {
         }),
         '*'
       );
+
+      await expect(promise).rejects.toThrow('Bridge destroyed');
     });
 
-    it('should invoke clipboard write', () => {
-      bridge.clipboard.write('test text');
+    it('should invoke clipboard write', async () => {
+      const promise = bridge.clipboard.write('test text');
+      bridge.destroy();
 
       expect(postMessageSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -182,12 +214,15 @@ describe('PluginBridgeImpl', () => {
         }),
         '*'
       );
+
+      await expect(promise).rejects.toThrow('Bridge destroyed');
     });
   });
 
   describe('storage', () => {
-    it('should invoke storage get', () => {
-      bridge.storage.get('my-key');
+    it('should invoke storage get', async () => {
+      const promise = bridge.storage.get('my-key');
+      bridge.destroy();
 
       expect(postMessageSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -196,10 +231,13 @@ describe('PluginBridgeImpl', () => {
         }),
         '*'
       );
+
+      await expect(promise).rejects.toThrow('Bridge destroyed');
     });
 
-    it('should invoke storage set', () => {
-      bridge.storage.set('my-key', { value: 123 });
+    it('should invoke storage set', async () => {
+      const promise = bridge.storage.set('my-key', { value: 123 });
+      bridge.destroy();
 
       expect(postMessageSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -208,10 +246,13 @@ describe('PluginBridgeImpl', () => {
         }),
         '*'
       );
+
+      await expect(promise).rejects.toThrow('Bridge destroyed');
     });
 
-    it('should invoke storage delete', () => {
-      bridge.storage.delete('my-key');
+    it('should invoke storage delete', async () => {
+      const promise = bridge.storage.delete('my-key');
+      bridge.destroy();
 
       expect(postMessageSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -220,12 +261,15 @@ describe('PluginBridgeImpl', () => {
         }),
         '*'
       );
+
+      await expect(promise).rejects.toThrow('Bridge destroyed');
     });
   });
 
   describe('notification', () => {
-    it('should invoke notification show', () => {
-      bridge.notification.show({ title: 'Test', body: 'Message' });
+    it('should invoke notification show', async () => {
+      const promise = bridge.notification.show({ title: 'Test', body: 'Message' });
+      bridge.destroy();
 
       expect(postMessageSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -233,6 +277,8 @@ describe('PluginBridgeImpl', () => {
         }),
         '*'
       );
+
+      await expect(promise).rejects.toThrow('Bridge destroyed');
     });
   });
 
@@ -251,8 +297,9 @@ describe('PluginBridgeImpl', () => {
       );
     });
 
-    it('should invoke modal', () => {
-      bridge.ui.showModal({ title: 'Test', content: 'Content' });
+    it('should invoke modal', async () => {
+      const promise = bridge.ui.showModal({ title: 'Test', content: 'Content' });
+      bridge.destroy();
 
       expect(postMessageSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -260,6 +307,8 @@ describe('PluginBridgeImpl', () => {
         }),
         '*'
       );
+
+      await expect(promise).rejects.toThrow('Bridge destroyed');
     });
   });
 });

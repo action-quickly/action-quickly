@@ -8,6 +8,7 @@ export class PluginBridgeImpl implements AQBridge {
     reject: (reason: any) => void;
   }>();
   private ipcId = 0;
+  private messageHandler: ((e: MessageEvent<AQMessage>) => void) | null = null;
 
   readonly version = '1.0.0';
 
@@ -17,7 +18,7 @@ export class PluginBridgeImpl implements AQBridge {
   }
 
   private setupMessageListener() {
-    window.addEventListener('message', (e: MessageEvent<AQMessage>) => {
+    this.messageHandler = (e: MessageEvent<AQMessage>) => {
       if (e.data?.source !== 'action-quick-host' || !e.data.id) return;
 
       if (e.data.type === 'event' && e.data.event) {
@@ -39,7 +40,8 @@ export class PluginBridgeImpl implements AQBridge {
         }
         this.pendingCalls.delete(e.data.id);
       }
-    });
+    };
+    window.addEventListener('message', this.messageHandler);
   }
 
   async invoke<T>(cmd: string, args?: any): Promise<T> {
@@ -76,6 +78,10 @@ export class PluginBridgeImpl implements AQBridge {
   }
 
   destroy(): void {
+    if (this.messageHandler) {
+      window.removeEventListener('message', this.messageHandler);
+      this.messageHandler = null;
+    }
     for (const { reject } of this.pendingCalls.values()) {
       reject(new Error('Bridge destroyed'));
     }
