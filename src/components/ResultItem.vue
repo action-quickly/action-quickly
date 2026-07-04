@@ -48,7 +48,9 @@ function onImgError(e: Event) {
       <div class="item-desc">{{ item.description }}</div>
     </div>
     <div class="item-meta">
-      <div v-if="item.type === 'system'" class="item-badge system">系统</div>
+      <div v-if="item.type === 'calculator'" class="item-badge calculator">计算</div>
+      <div v-if="item.type === 'url'" class="item-badge url">网址</div>
+      <div v-if="item.type === 'app'" class="item-badge app">应用</div>
       <div v-if="item.contextLabel" class="item-badge context">{{ item.contextLabel }}</div>
     </div>
   </div>
@@ -152,6 +154,21 @@ function onImgError(e: Event) {
 .item-badge.system {
   background: var(--accent-bg);
   color: var(--accent-text);
+}
+
+.item-badge.calculator {
+  background: var(--accent-bg);
+  color: var(--accent-text);
+}
+
+.item-badge.url {
+  background: rgba(128, 128, 128, 0.12);
+  color: var(--tx-secondary);
+}
+
+.item-badge.app {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
 }
 
 .item-badge.context {

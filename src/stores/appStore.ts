@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 import type { ViewType } from "../types/plugin";
+import type { DesktopApp } from "../search/types";
 
 export type ThemeId =
   | "violet-dark" | "violet-light"
@@ -23,6 +24,7 @@ export const useAppStore = defineStore("app", () => {
   const contextText = ref<string | null>(null);
   const selectedPluginId = ref<string | null>(null);
   const theme = ref<ThemeId>(loadTheme());
+  const appList = ref<DesktopApp[]>([]);
 
   watch(theme, (val) => {
     try { localStorage.setItem("action-quick-theme", val); } catch {}
@@ -60,6 +62,7 @@ export const useAppStore = defineStore("app", () => {
     contextText,
     selectedPluginId,
     theme,
+    appList,
     switchView,
     setQuery,
     setContext,

@@ -6,6 +6,7 @@ import { useStatsStore } from "../stores/statsStore";
 import { useSearch } from "../composables/useSearch";
 import { useShortcut } from "../composables/useShortcut";
 import { hideWindow } from "../api/window";
+import { initAppSearch } from "../search/apps";
 import SearchInput from "../components/SearchInput.vue";
 import ResultList from "../components/ResultList.vue";
 import ContextBar from "../components/ContextBar.vue";
@@ -23,6 +24,26 @@ function onSelect(item: SearchResultItem) {
   if (item.type === "plugin") {
     statsStore.recordUse(item.id);
     appStore.selectPlugin(item.id);
+  } else if (item.type === "url") {
+    // Open URL via Tauri opener plugin
+    const url = item.description; // fullUrl stored in description
+    if (url) {
+      window.open(url, "_blank");
+    }
+  } else if (item.type === "app") {
+    // Launch desktop app
+    if (item.path) {
+      // Use Tauri shell or process command to launch
+      import("@tauri-apps/api/core").then(({ invoke }) => {
+        invoke("hide_window");
+      });
+      // For now, apps are informational - will add launch in future
+    }
+  } else if (item.type === "calculator") {
+    // Copy result to clipboard
+    import("@tauri-apps/api/core").then(({ invoke }) => {
+      navigator.clipboard.writeText(item.name).catch(() => {});
+    });
   }
 }
 
@@ -43,6 +64,8 @@ onMounted(async () => {
   window.addEventListener("keydown", onWindowKeyDown);
   register("escape", () => hideWindow());
   await pluginStore.loadPlugins();
+  // Initialize background app scanning (non-blocking)
+  initAppSearch();
 });
 
 onUnmounted(() => {

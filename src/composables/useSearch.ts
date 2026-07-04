@@ -3,22 +3,23 @@ import { usePluginStore } from "../stores/pluginStore";
 import { useAppStore } from "../stores/appStore";
 import { useStatsStore } from "../stores/statsStore";
 import { matchPinyinInitials } from "../utils/pinyin";
+import { searchCalculator } from "../search/calculator";
+import { matchUrl } from "../search/url";
+import { searchApps } from "../search/apps";
 import type { SearchResultItem, InstalledPlugin } from "../types/plugin";
 
 /**
  * 搜索匹配层级
- * L0: 精确关键词命中
- * L1: 前缀关键词命中
- * L2: 模糊/拼音首字母命中
- * L3: 上下文规则命中
- * L4: 系统应用（暂未实现）
- * L5: 兜底，展示全部
+ * L0: 精确关键词命中（插件）
+ * L1: 前缀关键词命中（插件）/ 计算器 / URL
+ * L2: 模糊/拼音首字母命中（插件）/ App 匹配
+ * L3: 上下文规则命中（插件）
+ * L5: 兜底，展示全部插件
  */
 const LAYER_EXACT = 0;
 const LAYER_PREFIX = 1;
 const LAYER_FUZZY = 2;
 const LAYER_CONTEXT = 3;
-// const LAYER_SYSTEM = 4; // 系统应用暂未实现
 const LAYER_FALLBACK = 5;
 
 export function useSearch() {
@@ -99,13 +100,14 @@ export function useSearch() {
     return useCountScore * 0.6 + recencyScore * 0.4;
   }
 
-  const results = computed<SearchResultItem[]>(() => {
-    const query = appStore.searchQuery.trim();
-    const contextText = appStore.contextText;
-    const plugins = pluginStore.plugins;
-
-    if (plugins.length === 0) return [];
-
+  /**
+   * Search plugins only (extracted for reuse).
+   */
+  function searchPlugins(
+    query: string,
+    contextText: string | null,
+    plugins: InstalledPlugin[]
+  ): SearchResultItem[] {
     const items: SearchResultItem[] = [];
 
     for (const plugin of plugins) {
@@ -134,11 +136,9 @@ export function useSearch() {
         layer = LAYER_FALLBACK;
       }
 
-      // 4. 无查询 + 有上下文命中时，未命中上下文的插件仍兜底显示
-      if (!query && contextText && layer === LAYER_FALLBACK) {
-        // 仍然显示，但排在上下文命中的后面
-      }
+      const score = calcScore(plugin.id);
 
+      // Plugin priority weight: 1.5x multiplier
       items.push({
         id: plugin.id,
         name: plugin.name,
@@ -147,18 +147,41 @@ export function useSearch() {
         path: plugin.path,
         type: "plugin",
         layer,
-        score: calcScore(plugin.id),
+        score: score * 1.5, // Plugin weight multiplier
         contextLabel,
       });
     }
 
-    // 按层级升序，同层级按分数降序
-    items.sort((a, b) => {
-      if (a.layer !== b.layer) return a.layer - b.layer;
-      return b.score - a.score;
-    });
-
     return items;
+  }
+
+  const results = computed<SearchResultItem[]>(() => {
+    const query = appStore.searchQuery.trim();
+    const contextText = appStore.contextText;
+    const plugins = pluginStore.plugins;
+
+    if (plugins.length === 0) return [];
+
+    const items: SearchResultItem[] = [];
+
+    // 1. Plugin search (with 1.5x weight multiplier)
+    items.push(...searchPlugins(query, contextText, plugins));
+
+    // 2. Calculator (fixed L1)
+    const calc = searchCalculator(query);
+    if (calc) items.push(calc);
+
+    // 3. URL (fixed L1)
+    const url = matchUrl(query);
+    if (url) items.push(url);
+
+    // 4. App search (fuzzy match, no weight multiplier)
+    items.push(...searchApps(query));
+
+    // 5. Unified sort: layer asc → score desc
+    return items
+      .sort((a, b) => a.layer - b.layer || b.score - a.score)
+      .slice(0, 20);
   });
 
   return { results };
