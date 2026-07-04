@@ -1,5 +1,6 @@
-// src/plugins/isolation/types.ts
+import type { InstalledPlugin, PluginManifest } from '../../types/plugin';
 
+export type { InstalledPlugin, PluginManifest };
 export type IsolationLevel = 'light' | 'strict' | 'worker';
 
 export interface IsolatedContainer {
@@ -23,27 +24,7 @@ export interface PluginRenderer {
   destroy?: () => void;
 }
 
-// 前置类型引用（将在后续任务中定义）
-interface InstalledPlugin {
-  id: string;
-  path: string;
-  manifest: PluginManifest;
-}
-
-interface PluginManifest {
-  id: string;
-  name: string;
-  version: string;
-  main: string;
-  module?: string;
-  permissions?: string[];
-  sandbox?: {
-    level?: IsolationLevel;
-    allowDomAccess?: boolean;
-  };
-}
-
-interface PluginBridge {
+export interface PluginBridge {
   invoke<T>(cmd: string, args?: any): Promise<T>;
   on(event: string, callback: (data: any) => void): void;
   emit(event: string, data?: any): void;

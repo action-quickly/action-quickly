@@ -6,6 +6,7 @@ export interface PluginManifest {
   description: string;
   icon: string;
   main: string;
+  module?: string;
   keywords: string[];
   context?: {
     text?: {
@@ -15,6 +16,10 @@ export interface PluginManifest {
   };
   permissions: string[];
   minHostVersion: string;
+  sandbox?: {
+    level?: 'light' | 'strict' | 'worker';
+    allowDomAccess?: boolean;
+  };
 }
 
 export interface InstalledPlugin extends PluginManifest {
