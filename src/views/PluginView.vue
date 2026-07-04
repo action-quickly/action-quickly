@@ -6,9 +6,13 @@
         ← 返回
       </button>
       <span class="plugin-title">{{ currentPlugin?.name || '加载中...' }}</span>
+      <button v-if="isDevMode" class="refresh-btn" @click="refresh" title="重新加载插件">
+        ↻
+      </button>
     </div>
     <PluginContainer
       v-if="appStore.selectedPluginId"
+      :key="refreshKey"
       :plugin-id="appStore.selectedPluginId"
       :params="{ query: appStore.searchQuery, contextText: appStore.contextText }"
       @load="onPluginLoad"
@@ -19,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useAppStore } from '../stores/appStore';
 import { usePluginStore } from '../stores/pluginStore';
 import PluginContainer from '../components/PluginContainer.vue';
@@ -39,6 +43,27 @@ function onPluginLoad() {
 function onPluginError(error: Error) {
   console.error('Plugin error:', error);
 }
+
+const refreshKey = ref(0);
+const isDevMode = ref(false);
+
+async function checkDevMode() {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const devInfo = await invoke<{ id: string } | null>('get_dev_mode');
+    isDevMode.value = !!devInfo;
+  } catch {
+    isDevMode.value = false;
+  }
+}
+
+function refresh() {
+  refreshKey.value++;
+}
+
+onMounted(() => {
+  checkDevMode();
+});
 </script>
 
 <style scoped>
@@ -73,5 +98,20 @@ function onPluginError(error: Error) {
 .plugin-title {
   margin-left: 16px;
   font-weight: 500;
+}
+
+.refresh-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #999;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-left: auto;
+  transition: color .15s;
+}
+.refresh-btn:hover {
+  color: #333;
 }
 </style>
