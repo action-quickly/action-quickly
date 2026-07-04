@@ -1,9 +1,31 @@
 use tauri::{AppHandle, Manager, Window, Emitter};
 use tauri::plugin::TauriPlugin;
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
+use std::sync::OnceLock;
 
 /// 主程序版本（从 Cargo.toml 读取）
 pub const HOST_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub(crate) static DEV_PLUGIN_PATH: OnceLock<String> = OnceLock::new();
+
+pub fn get_dev_plugin_path() -> Option<&'static str> {
+    DEV_PLUGIN_PATH.get().map(|s| s.as_str())
+}
+
+fn parse_dev_plugin_arg(args: std::env::Args) -> Option<String> {
+    let collected: Vec<String> = args.collect();
+    for w in collected.windows(2) {
+        if w[0] == "--dev-plugin" {
+            let path = std::path::Path::new(&w[1]);
+            match path.canonicalize() {
+                Ok(canonical) => return Some(canonical.to_string_lossy().to_string()),
+                Err(e) => eprintln!("警告: --dev-plugin 路径无效 '{}': {}", w[1], e),
+            }
+            return None;
+        }
+    }
+    None
+}
 
 mod plugin;
 mod permission;
@@ -12,6 +34,7 @@ mod commands;
 mod config;
 mod version;
 mod apps;
+mod utils;
 
 use plugin::manager::PluginManager;
 use plugin::manifest::{InstalledPlugin, PluginManifest};
@@ -61,6 +84,10 @@ pub fn init_global_shortcut() -> TauriPlugin<tauri::Wry> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if let Some(path) = parse_dev_plugin_arg(std::env::args()) {
+        let _ = DEV_PLUGIN_PATH.set(path);
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -127,22 +154,14 @@ async fn aq_download_plugin(url: String) -> Result<String, String> {
     let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
 
     let temp_dir = std::env::temp_dir();
-    let filename = format!("aq-download-{}.zip", uuid_like());
+    let filename = format!("aq-download-{}.zip", utils::uuid_like());
     let zip_path = temp_dir.join(filename);
     std::fs::write(&zip_path, bytes).map_err(|e| e.to_string())?;
 
     Ok(zip_path.to_string_lossy().to_string())
 }
 
-/// 生成简单伪 UUID
-fn uuid_like() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-    format!("{:x}", ts)
-}
+
 
 // === 插件管理命令 ===
 
