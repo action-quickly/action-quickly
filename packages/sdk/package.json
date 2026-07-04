@@ -1,0 +1,14 @@
+{
+  "name": "@action-quick/sdk",
+  "version": "1.0.0",
+  "description": "Action-Quick Plugin SDK",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
