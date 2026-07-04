@@ -235,6 +235,20 @@ fn uninstall_plugin(app: AppHandle, plugin_id: String) -> Result<(), String> {
 /// 获取插件完整信息
 #[tauri::command]
 fn get_plugin(app: AppHandle, plugin_id: String) -> Result<InstalledPlugin, String> {
+    if let Some(dev_path) = get_dev_plugin_path() {
+        let manifest_path = std::path::Path::new(dev_path).join("plugin.json");
+        if let Ok(content) = std::fs::read_to_string(&manifest_path) {
+            if let Ok(manifest) = PluginManifest::from_json(&content) {
+                if manifest.id == plugin_id {
+                    return Ok(InstalledPlugin {
+                        manifest,
+                        path: dev_path.to_string(),
+                    });
+                }
+            }
+        }
+    }
+
     let manager = PluginManager::new(app.clone());
     manager
         .get_plugin(&plugin_id)
@@ -244,6 +258,19 @@ fn get_plugin(app: AppHandle, plugin_id: String) -> Result<InstalledPlugin, Stri
 /// 读取插件主文件内容
 #[tauri::command]
 fn read_plugin_main(app: AppHandle, plugin_id: String) -> Result<String, String> {
+    if let Some(dev_path) = get_dev_plugin_path() {
+        let manifest_path = std::path::Path::new(dev_path).join("plugin.json");
+        if let Ok(content) = std::fs::read_to_string(&manifest_path) {
+            if let Ok(manifest) = PluginManifest::from_json(&content) {
+                if manifest.id == plugin_id {
+                    let file_path = std::path::Path::new(dev_path).join(&manifest.main);
+                    return std::fs::read_to_string(&file_path)
+                        .map_err(|e| format!("读取插件文件失败: {}", e));
+                }
+            }
+        }
+    }
+
     let manager = PluginManager::new(app.clone());
     let plugin = manager
         .get_plugin(&plugin_id)
