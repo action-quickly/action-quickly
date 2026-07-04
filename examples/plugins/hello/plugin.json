@@ -14,5 +14,5 @@
     }
   },
   "permissions": ["clipboard", "storage", "notification", "http"],
-  "minHostVersion": "0.1.0"
+  "minHostVersion": "0.2.0"
 }

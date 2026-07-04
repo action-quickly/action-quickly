@@ -1,6 +1,6 @@
 [package]
 name = "action-quick"
-version = "0.1.0"
+version = "0.2.0"
 description = "An open-source desktop productivity tool, alternative to uTools"
 authors = ["ActionQuick"]
 edition = "2021"
