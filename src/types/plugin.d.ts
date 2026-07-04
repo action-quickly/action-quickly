@@ -27,7 +27,7 @@ export interface SearchResultItem {
   description: string;
   icon: string;
   path?: string;
-  type: "plugin" | "system";
+  type: "plugin" | "calculator" | "url" | "app";
   layer: number; // 0-5 优先级层级
   score: number; // 同层级内的排序分数
   contextLabel?: string; // 上下文匹配标签（如 "JSON"）
