@@ -11,11 +11,13 @@ mod context;
 mod commands;
 mod config;
 mod version;
+mod apps;
 
 use plugin::manager::PluginManager;
 use plugin::manifest::{InstalledPlugin, PluginManifest};
 use permission::store::PermissionStore;
 use commands::remove_plugin_storage;
+use apps::DesktopApp;
 
 // 将窗口定位到当前屏幕中心偏上位置
 fn position_window_center_top(window: &tauri::WebviewWindow) {
@@ -81,6 +83,7 @@ pub fn run() {
             get_plugin_url,
             get_selected_text,
             aq_download_plugin,
+            list_desktop_apps,
             // 配置命令
             config::get_app_config,
             config::save_app_config,
@@ -137,6 +140,21 @@ fn uuid_like() -> String {
         .unwrap_or_default()
         .as_nanos();
     format!("{:x}", ts)
+}
+
+// === 插件管理命令 ===
+
+/// 扫描桌面应用快捷方式，通过事件增量发送结果
+#[tauri::command]
+async fn list_desktop_apps(app: AppHandle) -> Vec<DesktopApp> {
+    let handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        // Batch 1: Fast scan of common locations
+        let fast_results = apps::scan_desktop_apps();
+        let _ = handle.emit("apps-batch", &fast_results);
+    });
+
+    vec![]
 }
 
 // === 插件管理命令 ===
