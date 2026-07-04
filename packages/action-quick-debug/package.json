@@ -1,0 +1,14 @@
+{
+  "name": "@action-quick/debug",
+  "version": "0.1.0",
+  "description": "ActionQuick plugin debug launcher",
+  "bin": {
+    "aq-debug": "bin/run.js"
+  },
+  "scripts": {
+    "start": "node bin/run.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
