@@ -2,6 +2,7 @@ use tauri::{AppHandle, Manager, Window, Emitter};
 use tauri::plugin::TauriPlugin;
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
 use std::sync::OnceLock;
+use serde::Serialize;
 
 /// 主程序版本（从 Cargo.toml 读取）
 pub const HOST_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -109,6 +110,7 @@ pub fn run() {
             uninstall_plugin,
             get_plugin_url,
             get_plugin,
+            get_dev_mode,
             read_plugin_main,
             get_selected_text,
             aq_download_plugin,
@@ -131,6 +133,19 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[derive(Serialize)]
+struct DevPluginInfo {
+    id: String,
+    path: String,
+    name: String,
+    version: String,
+    main: String,
+    author: String,
+    description: String,
+    icon: String,
+    min_host_version: String,
 }
 
 // === 主窗口命令 ===
@@ -256,4 +271,33 @@ fn get_plugin_url(app: AppHandle, plugin_id: String) -> Result<String, String> {
     let url = format!("asset://localhost/{}", trimmed);
 
     Ok(url)
+}
+
+#[tauri::command]
+fn get_dev_mode() -> Result<Option<DevPluginInfo>, String> {
+    let dev_path = match get_dev_plugin_path() {
+        Some(p) => p.to_string(),
+        None => return Ok(None),
+    };
+
+    let manifest_path = std::path::Path::new(&dev_path).join("plugin.json");
+    let content = std::fs::read_to_string(&manifest_path)
+        .map_err(|e| format!("无法读取 plugin.json: {}", e))?;
+    let manifest: PluginManifest = serde_json::from_str(&content)
+        .map_err(|e| format!("plugin.json 解析失败: {}", e))?;
+
+    manifest.validate()
+        .map_err(|e| format!("plugin.json 校验失败: {}", e))?;
+
+    Ok(Some(DevPluginInfo {
+        id: manifest.id.clone(),
+        path: dev_path,
+        name: manifest.name,
+        version: manifest.version,
+        main: manifest.main,
+        author: manifest.author,
+        description: manifest.description,
+        icon: manifest.icon,
+        min_host_version: manifest.min_host_version,
+    }))
 }
