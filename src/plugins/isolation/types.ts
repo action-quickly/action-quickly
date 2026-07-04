@@ -25,6 +25,7 @@ export interface PluginRenderer {
 }
 
 export interface PluginBridge {
+  pluginId: string;
   invoke<T>(cmd: string, args?: any): Promise<T>;
   on(event: string, callback: (data: any) => void): void;
   emit(event: string, data?: any): void;
