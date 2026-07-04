@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LightIsolation } from '../light';
 
 describe('LightIsolation', () => {
@@ -17,7 +17,7 @@ describe('LightIsolation', () => {
   it('should create Shadow DOM container', () => {
     const container = isolation.createContainer(parent);
     expect(container.root).toBeInstanceOf(ShadowRoot);
-    expect(container.root.mode).toBe('open');
+    expect((container.root as ShadowRoot).mode).toBe('open');
   });
 
   it('should append host element to parent', () => {
@@ -35,5 +35,26 @@ describe('LightIsolation', () => {
     const container = isolation.createContainer(parent);
     container.destroy();
     expect(parent.children.length).toBe(0);
+  });
+
+  it('should add event listener to host element', () => {
+    const container = isolation.createContainer(parent);
+    const handler = vi.fn();
+    container.addEventListener('click', handler);
+
+    const host = parent.children[0] as HTMLElement;
+    host.dispatchEvent(new Event('click'));
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('should remove event listener from host element', () => {
+    const container = isolation.createContainer(parent);
+    const handler = vi.fn();
+    container.addEventListener('click', handler);
+    container.removeEventListener('click', handler);
+
+    const host = parent.children[0] as HTMLElement;
+    host.dispatchEvent(new Event('click'));
+    expect(handler).not.toHaveBeenCalled();
   });
 });
