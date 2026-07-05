@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const os = require('os');
 
 const CACHE_DIR = path.join(os.homedir(), '.action-quick', 'cache');
@@ -10,7 +10,7 @@ const GITHUB_REPO = 'action-quickly/action-quickly';
 
 function assetPatterns() {
   switch (os.platform()) {
-    case 'win32': return ['action-quick-x86_64-pc-windows-msvc.exe'];
+    case 'win32': return ['action-quick-x86_64-pc-windows-msvc.exe', 'x64_en-US.msi'];
     case 'darwin': return ['action-quick-x86_64-apple-darwin', 'action-quick-aarch64-apple-darwin'];
     case 'linux': return ['.deb', '.AppImage'];
     default: return [];
@@ -176,6 +176,25 @@ async function downloadAndInstall(release) {
     };
     doDownload(asset.browser_download_url);
   });
+
+  // MSI 解压 (Windows 自带 msiexec，无需第三方工具)
+  if (asset.name.endsWith('.msi')) {
+    console.log('  解压 MSI...');
+    const extractDir = path.join(dir, 'msi-extract');
+    fs.mkdirSync(extractDir, { recursive: true });
+    execSync(`msiexec /a "${dest}" /qn TARGETDIR="${extractDir}"`, { stdio: 'inherit' });
+    const files = fs.readdirSync(extractDir, { recursive: true });
+    const exe = files.find(f => f.endsWith('.exe'));
+    if (exe) {
+      const exePath = path.join(extractDir, exe);
+      const finalExe = path.join(dir, 'action-quick-x86_64-pc-windows-msvc.exe');
+      fs.renameSync(exePath, finalExe);
+    }
+    try { fs.unlinkSync(dest); } catch {}
+    try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch {}
+    fs.writeFileSync(cacheAssetPath(version), 'action-quick-x86_64-pc-windows-msvc.exe');
+    return;
+  }
 
   // 设置可执行权限 (macOS/Linux)
   if (os.platform() !== 'win32') {
