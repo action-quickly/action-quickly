@@ -5,11 +5,8 @@ const https = require('https');
 const { spawn } = require('child_process');
 const os = require('os');
 
-// --- Config ---
 const CACHE_DIR = path.join(os.homedir(), '.action-quick', 'cache');
 const GITHUB_REPO = 'action-quickly/action-quickly';
-
-// --- Helpers ---
 
 function pluginJsonPath() {
   const p = path.resolve(process.cwd(), 'plugin.json');
@@ -36,17 +33,13 @@ function parsePluginJson(filePath) {
   }
 }
 
-function getPlatform() {
-  const map = {
-    'win32': { platform: 'x86_64-pc-windows-msvc', ext: 'zip' },
-    'darwin': { platform: 'x86_64-apple-darwin', ext: 'tar.gz' },
-    'linux':  { platform: 'x86_64-unknown-linux-gnu', ext: 'tar.gz' },
-  };
-  return map[os.platform()];
-}
-
-function getBinaryName(ext) {
-  return ext === 'zip' ? 'action-quick.exe' : 'action-quick';
+function getArtifactName() {
+  switch (os.platform()) {
+    case 'win32': return 'action-quick.exe';
+    case 'darwin': return 'ActionQuick_x86_64.app.tar.gz';
+    case 'linux': return 'action-quick-x86_64-unknown-linux-gnu.tar.gz';
+    default: return null;
+  }
 }
 
 function hostDir(version) {
@@ -54,13 +47,12 @@ function hostDir(version) {
 }
 
 function isCached(version) {
-  const plat = getPlatform();
-  if (!plat) {
+  const artifact = getArtifactName();
+  if (!artifact) {
     console.error('错误: 不支持的操作系统:', os.platform());
     process.exit(1);
   }
-  const binName = getBinaryName(plat.ext);
-  return fs.existsSync(path.join(hostDir(version), binName));
+  return fs.existsSync(path.join(hostDir(version), artifact));
 }
 
 function semverGte(a, b) {
@@ -115,14 +107,28 @@ async function findCompatibleRelease(minVersion) {
   return best;
 }
 
+function getBinPath(version) {
+  const artifact = getArtifactName();
+  const dir = hostDir(version);
+
+  if (os.platform() === 'win32') {
+    return path.join(dir, artifact);
+  }
+
+  if (os.platform() === 'darwin') {
+    return path.join(dir, 'ActionQuick.app', 'Contents', 'MacOS', 'action-quick');
+  }
+
+  return path.join(dir, 'action-quick');
+}
+
 async function downloadRelease(version) {
-  const plat = getPlatform();
+  const artifact = getArtifactName();
   const dir = hostDir(version);
   fs.mkdirSync(dir, { recursive: true });
 
-  const artifactName = `action-quick-${plat.platform}.${plat.ext}`;
-  const url = `https://github.com/${GITHUB_REPO}/releases/download/v${version}/${artifactName}`;
-  const dest = path.join(dir, artifactName);
+  const url = `https://github.com/${GITHUB_REPO}/releases/download/v${version}/${artifact}`;
+  const dest = path.join(dir, artifact);
 
   console.log(`下载 ActionQuick v${version}...`);
 
@@ -138,31 +144,25 @@ async function downloadRelease(version) {
       res.pipe(file);
       file.on('finish', () => {
         file.close();
-        if (plat.ext === 'zip') {
-          console.log('  下载完成，解压中...');
-          const { execSync } = require('child_process');
-          try {
-            execSync(`powershell -Command "Expand-Archive -Path '${dest}' -DestinationPath '${dir}' -Force"`);
-          } catch {}
-        } else {
+        if (artifact.endsWith('.tar.gz')) {
+          console.log('  解压中...');
           const { execSync } = require('child_process');
           execSync(`tar -xzf "${dest}" -C "${dir}"`);
+          try { fs.unlinkSync(dest); } catch {}
         }
-        try { fs.unlinkSync(dest); } catch {}
         resolve();
       });
     }).on('error', (err) => { file.close(); fs.unlinkSync(dest); reject(err); });
   });
 }
 
-// --- Main ---
-
 async function main() {
   const manifest = parsePluginJson(pluginJsonPath());
-  const plat = getPlatform();
-  if (!plat) process.exit(1);
 
-  const binName = getBinaryName(plat.ext);
+  if (!getArtifactName()) {
+    console.error('错误: 不支持的操作系统:', os.platform());
+    process.exit(1);
+  }
 
   console.log(`查找兼容 v${manifest.minHostVersion} 的最新版本...`);
   const version = await findCompatibleRelease(manifest.minHostVersion);
@@ -175,7 +175,7 @@ async function main() {
     await downloadRelease(version);
   }
 
-  const binaryPath = path.join(hostDir(version), binName);
+  const binaryPath = getBinPath(version);
   if (!fs.existsSync(binaryPath)) {
     console.error(`错误: 主程序二进制未找到: ${binaryPath}`);
     process.exit(1);
