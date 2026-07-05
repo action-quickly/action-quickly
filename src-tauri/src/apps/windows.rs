@@ -1,6 +1,7 @@
 use super::DesktopApp;
 use base64::Engine;
 use std::path::PathBuf;
+use std::os::windows::process::CommandExt;
 
 /// Scan all Windows .lnk shortcuts from common locations using a single
 /// PowerShell invocation for batch parsing (avoids per-file process overhead).
@@ -72,6 +73,7 @@ fn batch_parse_lnks(lnk_paths: &[PathBuf]) -> Vec<DesktopApp> {
 
         let output = match std::process::Command::new("powershell")
             .args(["-NoProfile", "-NonInteractive", "-EncodedCommand", &b64])
+            .creation_flags(0x08000000) // CREATE_NO_WINDOW
             .output()
         {
             Ok(o) => o,
