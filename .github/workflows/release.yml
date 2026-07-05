@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: '版本号 (如 0.1.0)，留空则从 Cargo.toml 读取'
+        description: '版本号，留空则从 Cargo.toml 读取'
         required: false
         type: string
 
@@ -15,11 +15,14 @@ jobs:
       matrix:
         include:
           - platform: windows-latest
-            args: ''
+            target: x86_64-pc-windows-msvc
+            binary-ext: .exe
           - platform: macos-latest
-            args: '--target aarch64-apple-darwin'
+            target: x86_64-apple-darwin
+            binary-ext: ''
           - platform: macos-latest
-            args: '--target x86_64-apple-darwin'
+            target: aarch64-apple-darwin
+            binary-ext: ''
 
     runs-on: ${{ matrix.platform }}
     permissions:
@@ -39,7 +42,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.target }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -61,9 +64,9 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
-      - name: Build and bundle (Windows)
-        if: matrix.platform == 'windows-latest'
-        uses: tauri-apps/tauri-action@v0
+      - name: Build and bundle
+        uses: tauri-apps/tauri-action@v2
+        id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -72,16 +75,14 @@ jobs:
           releaseBody: 'ActionQuick v${{ steps.version.outputs.version }}'
           releaseDraft: true
           prerelease: false
+          args: --target ${{ matrix.target }}
 
-      - name: Build and bundle (macOS)
-        if: matrix.platform == 'macos-latest'
-        uses: tauri-apps/tauri-action@v0
+      - name: Upload raw binary
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v${{ steps.version.outputs.version }}
-          releaseName: 'v${{ steps.version.outputs.version }}'
-          releaseBody: 'ActionQuick v${{ steps.version.outputs.version }}'
-          releaseDraft: true
-          prerelease: false
-          args: ${{ matrix.args }}
+          upload_url: ${{ steps.tauri.outputs.release-upload-url }}
+          asset_path: src-tauri/target/${{ matrix.target }}/release/action-quick${{ matrix.binary-ext }}
+          asset_name: action-quick-${{ matrix.target }}${{ matrix.binary-ext }}
+          asset_content_type: application/octet-stream
