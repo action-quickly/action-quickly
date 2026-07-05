@@ -2,11 +2,82 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const http = require('http');
+const tls = require('tls');
+const net = require('net');
 const { spawn, execSync } = require('child_process');
 const os = require('os');
 
 const CACHE_DIR = path.join(os.homedir(), '.action-quick', 'cache');
 const GITHUB_REPO = 'action-quickly/action-quickly';
+
+// ── 代理支持 ──────────────────────────────────────────────────────────────
+
+function getProxyUrl() {
+  return process.env.HTTPS_PROXY || process.env.https_proxy ||
+         process.env.HTTP_PROXY  || process.env.http_proxy  || null;
+}
+
+function createProxyAgent() {
+  const proxyUrl = getProxyUrl();
+  if (!proxyUrl) return undefined;
+
+  const u = new URL(proxyUrl);
+  const proxyHost = u.hostname;
+  const proxyPort = parseInt(u.port) || (u.protocol === 'https:' ? 443 : 80);
+  const auth = u.username ? `${u.username}:${u.password || ''}` : null;
+
+  // https.Agent 兼容：提供 createConnection 实现 CONNECT 隧道
+  return new https.Agent({
+    keepAlive: true,
+    createConnection(options, cb) {
+      const sock = net.connect({ host: proxyHost, port: proxyPort });
+      sock.on('connect', () => {
+        const targetHost = options.hostname || options.host || options.servername;
+        const targetPort = options.port || 443;
+        let req = `CONNECT ${targetHost}:${targetPort} HTTP/1.1\r\nHost: ${targetHost}:${targetPort}\r\n`;
+        if (auth) req += `Proxy-Authorization: Basic ${Buffer.from(auth).toString('base64')}\r\n`;
+        req += '\r\n';
+        sock.write(req);
+
+        let buf = '';
+        sock.once('data', (chunk) => {
+          buf += chunk.toString();
+          const match = buf.match(/^HTTP\/\d\.\d (\d{3})/);
+          if (match && match[1] === '200') {
+            // 去掉响应头剩余部分后升级为 TLS
+            const headerEnd = buf.indexOf('\r\n\r\n');
+            const tlsOpts = { socket: sock, servername: options.servername || targetHost, ALPNProtocols: options.ALPNProtocols };
+            const tlsSocket = tls.connect(tlsOpts);
+            tlsSocket.on('secureConnect', () => {
+              // 如果响应头后有遗留数据，塞回 TLS 流
+              if (headerEnd >= 0 && buf.length > headerEnd + 4) {
+                tlsSocket.push(Buffer.from(buf.slice(headerEnd + 4)));
+              }
+              cb(null, tlsSocket);
+            });
+            tlsSocket.on('error', (e) => cb(e));
+          } else {
+            sock.destroy();
+            cb(new Error(`代理 CONNECT 失败: ${buf.split('\r\n')[0] || match?.[0] || 'unknown'}`));
+          }
+        });
+      });
+      sock.on('error', (e) => cb(e));
+    }
+  });
+}
+
+// ── 共享的请求选项（含代理）─────────────────────────────────────────────────
+
+function requestOptions(extraHeaders) {
+  const opts = { headers: { 'User-Agent': 'action-quick-debug', ...(extraHeaders || {}) } };
+  const agent = createProxyAgent();
+  if (agent) opts.agent = agent;
+  return opts;
+}
+
+// ── 工具函数 ──────────────────────────────────────────────────────────────
 
 function assetPatterns() {
   switch (os.platform()) {
@@ -88,7 +159,7 @@ function sameMajor(a, b) {
 
 async function fetchJSON(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'action-quick-debug' } }, (res) => {
+    https.get(url, requestOptions(), (res) => {
       if (res.statusCode === 302 || res.statusCode === 301) {
         fetchJSON(res.headers.location).then(resolve).catch(reject);
         return;
@@ -148,11 +219,13 @@ async function downloadAndInstall(release) {
   const dest = path.join(dir, asset.name);
 
   console.log(`下载 ActionQuick v${version}...`);
+  const proxy = getProxyUrl();
+  if (proxy) console.log(`  通过代理: ${proxy}`);
 
   await new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
     const doDownload = (url) => {
-      https.get(url, { headers: { 'User-Agent': 'action-quick-debug' } }, (res) => {
+      https.get(url, requestOptions(), (res) => {
         if (res.statusCode === 302 || res.statusCode === 301) {
           doDownload(res.headers.location);
           return;
