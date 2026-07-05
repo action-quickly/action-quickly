@@ -1,7 +1,7 @@
 use crate::permission::store::PermissionStore;
 use crate::plugin::manifest::{InstalledPlugin, ManifestError, PluginManifest};
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 /// 插件管理器
 pub struct PluginManager {
@@ -15,19 +15,13 @@ impl PluginManager {
 
     /// 获取插件根目录 ~/.action-quick/plugins/
     pub fn plugins_dir(&self) -> PathBuf {
-        let base = self.app.path().home_dir().unwrap_or_else(|_| {
-            dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
-        });
-        base.join(".action-quick").join("plugins")
+        crate::utils::app_data_dir(&self.app).join("plugins")
     }
 
     /// 获取数据存储目录 ~/.action-quick/storage/
     #[allow(dead_code)]
     pub fn storage_dir(&self) -> PathBuf {
-        let base = self.app.path().home_dir().unwrap_or_else(|_| {
-            dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
-        });
-        base.join(".action-quick").join("storage")
+        crate::utils::app_data_dir(&self.app).join("storage")
     }
 
     /// 列出所有已安装插件

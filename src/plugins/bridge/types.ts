@@ -1,9 +1,12 @@
-export interface AQBridge {
-  version: string;
+export interface PluginBridge {
   pluginId: string;
   invoke<T>(cmd: string, args?: any): Promise<T>;
   on(event: string, callback: (data: any) => void): void;
   emit(event: string, data?: any): void;
+}
+
+export interface AQBridge extends PluginBridge {
+  version: string;
   clipboard: {
     read(): Promise<string>;
     write(text: string): Promise<void>;

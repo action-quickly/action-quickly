@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_notification::NotificationExt;
 use crate::permission::store::PermissionStore;
@@ -57,16 +57,14 @@ pub fn aq_fs_write(app: AppHandle, plugin_id: String, path: String, content: Str
 #[tauri::command]
 pub async fn aq_http_get(app: AppHandle, plugin_id: String, url: String) -> Result<String, String> {
     check_permission(&app, &plugin_id, "http")?;
-    let client = reqwest::Client::new();
-    let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let resp = crate::utils::http_client().get(&url).send().await.map_err(|e| e.to_string())?;
     resp.text().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn aq_http_post(app: AppHandle, plugin_id: String, url: String, body: String) -> Result<String, String> {
     check_permission(&app, &plugin_id, "http")?;
-    let client = reqwest::Client::new();
-    let resp = client.post(&url).body(body).send().await.map_err(|e| e.to_string())?;
+    let resp = crate::utils::http_client().post(&url).body(body).send().await.map_err(|e| e.to_string())?;
     resp.text().await.map_err(|e| e.to_string())
 }
 
@@ -76,10 +74,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 fn storage_path(app: &AppHandle, plugin_id: &str) -> PathBuf {
-    let base = app.path().home_dir().unwrap_or_else(|_| {
-        dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
-    });
-    let dir = base.join(".action-quick").join("storage");
+    let dir = crate::utils::app_data_dir(app).join("storage");
     let _ = std::fs::create_dir_all(&dir);
     dir.join(format!("{}.json", plugin_id))
 }

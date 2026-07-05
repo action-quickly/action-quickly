@@ -181,8 +181,7 @@ fn get_selected_text(app: AppHandle) -> Result<String, String> {
 /// 下载插件 zip 到临时目录
 #[tauri::command]
 async fn aq_download_plugin(url: String) -> Result<String, String> {
-    let client = reqwest::Client::new();
-    let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let resp = crate::utils::http_client().get(&url).send().await.map_err(|e| e.to_string())?;
     let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
 
     let temp_dir = std::env::temp_dir();

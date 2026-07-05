@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 /// 权限存储 — 持久化插件的已授权权限
 pub struct PermissionStore {
@@ -14,10 +14,7 @@ impl PermissionStore {
 
     /// 权限文件路径 ~/.action-quick/permissions.json
     fn permissions_file(&self) -> PathBuf {
-        let base = self.app.path().home_dir().unwrap_or_else(|_| {
-            dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
-        });
-        let dir = base.join(".action-quick");
+        let dir = crate::utils::app_data_dir(&self.app);
         std::fs::create_dir_all(&dir).ok();
         dir.join("permissions.json")
     }

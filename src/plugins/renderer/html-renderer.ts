@@ -1,6 +1,6 @@
 import type { IsolatedContainer } from '../isolation/types';
 import type { InstalledPlugin } from '../../types/plugin';
-import type { PluginBridge } from '../isolation/types';
+import type { PluginBridge } from '../bridge/types';
 import type { PluginRenderer } from './types';
 import { PLUGIN_SDK_VERSION } from '../bridge/global-api';
 
