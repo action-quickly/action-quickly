@@ -132,7 +132,7 @@ action-quick/
 │   │   └── version.rs      # 版本比较
 │   └── capabilities/       # Tauri 权限配置
 ├── packages/
-│   ├── plugin-sdk/         # 插件 SDK
+│   ├── sdk/                # 插件 SDK (@action-quick/sdk)
 │   └── create-action-quick-plugin/  # 脚手架工具
 ├── examples/plugins/       # 示例插件 (git submodules)
 ├── community/              # 社区插件索引 (git submodule)

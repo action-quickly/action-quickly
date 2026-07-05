@@ -3,172 +3,392 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello 示例插件</title>
+  <title>Hello - SDK 能力全览</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: rgba(30, 30, 35, 0.95);
-      color: #e8e8e8;
-      padding: 24px;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      overflow-y: auto;
+      background: #1a1a1f; color: #e0e0e0; padding: 24px; min-height: 100vh;
     }
-    h1 { font-size: 20px; font-weight: 600; }
-    .section {
-      background: rgba(255,255,255,0.05);
-      padding: 16px;
-      border-radius: 8px;
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 12px; }
+    .card {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
     }
-    .section h3 { font-size: 14px; margin-bottom: 8px; color: #4a9eff; }
-    .params code { color: #4a9eff; }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .card h2 { font-size: 14px; color: #4a9eff; display: flex; align-items: center; gap: 6px; }
+    .card h2 .badge { font-size: 10px; background: rgba(74,158,255,0.15); color: #4a9eff; padding: 1px 6px; border-radius: 4px; font-weight: 400; }
+    .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .row.fill input { flex: 1; min-width: 60px; }
     button {
-      background: #4a9eff;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      font-family: inherit;
+      background: #4a9eff; color: #fff; border: none; padding: 7px 14px; border-radius: 6px;
+      cursor: pointer; font-size: 12px; font-family: inherit; white-space: nowrap;
     }
     button:hover { background: #3a8ee5; }
-    .result {
-      font-size: 12px;
-      color: #999;
-      margin-top: 8px;
-      word-break: break-all;
-    }
-    input {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 6px;
-      padding: 6px 10px;
-      color: #e8e8e8;
-      font-size: 13px;
-      font-family: inherit;
+    button.green { background: #2ea043; } button.green:hover { background: #238636; }
+    button.orange { background: #d29922; } button.orange:hover { background: #bb8009; }
+    button.purple { background: #8250df; } button.purple:hover { background: #6f42c1; }
+    button.red { background: #da3633; } button.red:hover { background: #b62324; }
+    button.sm { padding: 4px 10px; font-size: 11px; }
+    input, select {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 5px; padding: 5px 8px; color: #e0e0e0; font-size: 12px; font-family: inherit;
       outline: none;
-      flex: 1;
-      min-width: 100px;
     }
+    input:focus, select:focus { border-color: #4a9eff; }
+    .out {
+      background: rgba(0,0,0,0.25); border-radius: 5px; padding: 8px 10px;
+      font-size: 12px; min-height: 28px; word-break: break-all; line-height: 1.5;
+      font-family: "SF Mono", Consolas, monospace; color: #b0b0b0; max-height: 80px; overflow-y: auto;
+    }
+    .out .ok { color: #3fb950; }
+    .out .err { color: #f85149; }
+    .out .val { color: #d2a8ff; }
+    .chip {
+      display: inline-block; background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; color: #999;
+    }
+    #params { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; }
+    #params code { color: #4a9eff; }
   </style>
 </head>
 <body>
-  <h1>Hello 示例插件</h1>
 
-  <div class="section">
-    <h3>插件参数</h3>
-    <div class="result" id="params">加载参数中...</div>
-  </div>
+  <h1>🛠 SDK 能力全览</h1>
+  <div class="subtitle" id="subtitle">加载中...</div>
 
-  <div class="section">
-    <h3>剪贴板</h3>
-    <div class="actions">
-      <button id="trayClip">写入当前时间</button>
-      <button id="readClip">读取剪贴板</button>
+  <div id="params">参数: 加载中...</div>
+
+  <div class="grid">
+
+    <!-- 基本信息 -->
+    <div class="card">
+      <h2>ℹ️ 基本信息</h2>
+      <div class="row"><span class="chip">version</span> <code id="infoVersion">-</code></div>
+      <div class="row"><span class="chip">pluginId</span> <code id="infoPluginId">-</code></div>
+      <div class="row"><span class="chip">platform</span> <code id="infoPlatform">-</code></div>
     </div>
-    <div class="result" id="clipResult"></div>
-  </div>
 
-  <div class="section">
-    <h3>系统通知</h3>
-    <div class="actions">
-      <button id="notify">发送通知</button>
+    <!-- 剪贴板 -->
+    <div class="card">
+      <h2>📋 剪贴板 <span class="badge">aq.clipboard</span></h2>
+      <div class="row">
+        <input id="clipText" value="Hello ActionQuick!" style="flex:1" />
+        <button id="clipWrite">写入</button>
+      </div>
+      <div class="row">
+        <button id="clipRead">读取</button>
+        <button id="clipWriteTime" class="orange sm">写入当前时间</button>
+      </div>
+      <div class="out" id="clipOut">操作剪贴板...</div>
     </div>
-    <div class="result" id="notifyResult"></div>
-  </div>
 
-  <div class="section">
-    <h3>KV 存储</h3>
-    <div class="actions">
-      <input id="storageKey" placeholder="key" value="test" />
-      <input id="storageValue" placeholder="value" value="hello" />
-      <button id="storageSet">写入</button>
-      <button id="storageGet">读取</button>
-      <button id="storageKeys">所有 key</button>
+    <!-- 通知 -->
+    <div class="card">
+      <h2>🔔 通知 <span class="badge">aq.notification</span></h2>
+      <div class="row fill">
+        <input id="notifTitle" value="ActionQuick" placeholder="标题" style="flex:1" />
+      </div>
+      <div class="row fill">
+        <input id="notifBody" value="来自 Hello 插件的通知" placeholder="内容" style="flex:1" />
+      </div>
+      <div class="row">
+        <button id="notifShow">发送通知</button>
+        <button id="notifHello" class="green sm">发送 "你好"</button>
+      </div>
+      <div class="out" id="notifOut">通知结果...</div>
     </div>
-    <div class="result" id="storageResult"></div>
-  </div>
 
-  <div class="section">
-    <h3>HTTP 请求</h3>
-    <div class="actions">
-      <button id="httpGet">GET httpbin.org/get</button>
+    <!-- 存储 -->
+    <div class="card">
+      <h2>💾 KV 存储 <span class="badge">aq.storage</span></h2>
+      <div class="row fill">
+        <input id="stKey" value="theme" placeholder="key" style="flex:1" />
+        <input id="stVal" value="dark" placeholder="value" style="flex:1" />
+      </div>
+      <div class="row">
+        <button id="stSet" class="green">写入</button>
+        <button id="stGet">读取</button>
+        <button id="stDel" class="red">删除</button>
+        <button id="stKeys" class="purple sm">列出所有 key</button>
+        <button id="stClear" class="orange sm">清除演示数据</button>
+      </div>
+      <div class="out" id="stOut">存储结果...</div>
     </div>
-    <div class="result" id="httpResult"></div>
+
+    <!-- HTTP -->
+    <div class="card">
+      <h2>🌐 HTTP 请求 <span class="badge">aq.http</span></h2>
+      <div class="row fill">
+        <select id="httpMethod" style="width:70px">
+          <option>GET</option>
+          <option>POST</option>
+        </select>
+        <input id="httpUrl" value="https://httpbin.org/get" placeholder="URL" style="flex:1" />
+      </div>
+      <div class="row fill">
+        <input id="httpBody" value='{"test":1}' placeholder="POST body (JSON)" style="flex:1" />
+      </div>
+      <div class="row">
+        <button id="httpSend">发送请求</button>
+        <button id="httpBinGet" class="green sm">GET httpbin/get</button>
+        <button id="httpBinPost" class="purple sm">POST httpbin/post</button>
+      </div>
+      <div class="out" id="httpOut">HTTP 结果...</div>
+    </div>
+
+    <!-- UI -->
+    <div class="card">
+      <h2>🖥 UI <span class="badge">aq.ui</span></h2>
+      <div class="row">
+        <button id="uiToastInfo" class="green sm">Toast Info</button>
+        <button id="uiToastSuccess" class="purple sm">Toast Success</button>
+        <button id="uiToastError" class="red sm">Toast Error</button>
+      </div>
+      <div class="row">
+        <button id="uiModal">显示 Modal</button>
+      </div>
+      <div class="out" id="uiOut">UI 操作结果...</div>
+    </div>
+
+    <!-- 事件系统 -->
+    <div class="card">
+      <h2>📡 事件系统 <span class="badge">aq.on / aq.emit</span></h2>
+      <div class="row fill">
+        <input id="evtName" value="hello:ping" placeholder="事件名" style="flex:1" />
+        <input id="evtData" value='{"from":"hello"}' placeholder="数据 (JSON)" style="flex:1" />
+      </div>
+      <div class="row">
+        <button id="evtEmit">发射事件</button>
+        <button id="evtSub" class="green sm">订阅 hello:ping</button>
+        <button id="evtUnsub" class="red sm">取消订阅</button>
+      </div>
+      <div class="out" id="evtOut">事件系统...</div>
+    </div>
+
+    <!-- invoke 底层 -->
+    <div class="card">
+      <h2>⚙️ invoke 底层 <span class="badge">aq.invoke</span></h2>
+      <div class="row fill">
+        <select id="invCmd" style="flex:1">
+          <option value="aq_storage_keys">aq_storage_keys</option>
+          <option value="aq_clipboard_read">aq_clipboard_read</option>
+          <option value="aq_notification">aq_notification</option>
+        </select>
+      </div>
+      <div class="row fill">
+        <input id="invArgs" value='{}' placeholder='JSON args' style="flex:1" />
+      </div>
+      <div class="row">
+        <button id="invokeSend">invoke</button>
+        <button id="invokeKeys" class="purple sm">获取所有 storage key</button>
+      </div>
+      <div class="out" id="invOut">invoke 结果...</div>
+    </div>
+
+    <!-- 文件系统 -->
+    <div class="card">
+      <h2>📁 文件系统 <span class="badge">aq.invoke(fs)</span></h2>
+      <div class="row fill">
+        <input id="fsPath" value="plugin_data/hello.txt" placeholder="路径" style="flex:1" />
+      </div>
+      <div class="row fill">
+        <input id="fsContent" value="Hello from ActionQuick!" placeholder="内容" style="flex:1" />
+      </div>
+      <div class="row">
+        <button id="fsWrite" class="green">写入文件</button>
+        <button id="fsRead">读取文件</button>
+      </div>
+      <div class="out" id="fsOut">文件系统...</div>
+    </div>
+
   </div>
 
   <script>
-    var paramsEl = document.getElementById("params");
-    var clipResultEl = document.getElementById("clipResult");
-    var notifyResultEl = document.getElementById("notifyResult");
-    var storageResultEl = document.getElementById("storageResult");
-    var httpResultEl = document.getElementById("httpResult");
+    var out = function(id) { return document.getElementById(id); };
 
-    // 接收插件参数
-    window.addEventListener("message", function(event) {
-      var data = event.data;
-      if (!data || data.source !== "action-quick-host") return;
-      if (data.type === "plugin-params") {
-        var p = data.params;
-        paramsEl.innerHTML =
-          "query: <code>" + (p.query || "无") + "</code><br>" +
-          "contextText: <code>" + (p.contextText || "无") + "</code>";
+    // 全局 log 辅助
+    var log = function(el, msg, type) {
+      el.innerHTML = (type === 'ok' ? '<span class="ok">✓</span> ' : type === 'err' ? '<span class="err">✗</span> ' : '') + msg;
+    };
+
+    // ---------- 基本信息 ----------
+    (function() {
+      var v = window.aq && window.aq.version || '?';
+      var pid = window.aq && window.aq.pluginId || '?';
+      out('infoVersion').textContent = v;
+      out('infoPluginId').textContent = pid;
+      out('infoPlatform').textContent = navigator.platform;
+      out('subtitle').textContent = 'SDK v' + v + ' | pluginId: ' + pid;
+    })();
+
+    // ---------- 剪贴板 ----------
+    out('clipWrite').addEventListener('click', function() {
+      var text = out('clipText').value;
+      window.aq.clipboard.write(text)
+        .then(function() { log(out('clipOut'), '已写入: "' + text + '"', 'ok'); })
+        .catch(function(e) { log(out('clipOut'), '写入失败: ' + e, 'err'); });
+    });
+    out('clipRead').addEventListener('click', function() {
+      window.aq.clipboard.read()
+        .then(function(text) { log(out('clipOut'), '读取结果: "' + text + '"', 'ok'); })
+        .catch(function(e) { log(out('clipOut'), '读取失败: ' + e, 'err'); });
+    });
+    out('clipWriteTime').addEventListener('click', function() {
+      var t = '当前时间: ' + new Date().toLocaleString();
+      window.aq.clipboard.write(t)
+        .then(function() { log(out('clipOut'), '已写入: "' + t + '"', 'ok'); })
+        .catch(function(e) { log(out('clipOut'), '写入失败: ' + e, 'err'); });
+    });
+
+    // ---------- 通知 ----------
+    out('notifShow').addEventListener('click', function() {
+      window.aq.notification.show({
+        title: out('notifTitle').value,
+        body: out('notifBody').value
+      }).then(function() { log(out('notifOut'), '通知已发送', 'ok'); })
+        .catch(function(e) { log(out('notifOut'), '通知失败: ' + e, 'err'); });
+    });
+    out('notifHello').addEventListener('click', function() {
+      window.aq.notification.show({ title: 'ActionQuick', body: '你好！来自 Hello 插件' })
+        .then(function() { log(out('notifOut'), '通知已发送', 'ok'); })
+        .catch(function(e) { log(out('notifOut'), '通知失败: ' + e, 'err'); });
+    });
+
+    // ---------- 存储 ----------
+    out('stSet').addEventListener('click', function() {
+      var k = out('stKey').value, v = out('stVal').value;
+      window.aq.storage.set(k, v)
+        .then(function() { log(out('stOut'), '已写入: ' + k + ' = ' + v, 'ok'); })
+        .catch(function(e) { log(out('stOut'), '写入失败: ' + e, 'err'); });
+    });
+    out('stGet').addEventListener('click', function() {
+      var k = out('stKey').value;
+      window.aq.storage.get(k)
+        .then(function(v) { log(out('stOut'), k + ' = <span class="val">' + JSON.stringify(v) + '</span>', 'ok'); })
+        .catch(function(e) { log(out('stOut'), '读取失败: ' + e, 'err'); });
+    });
+    out('stDel').addEventListener('click', function() {
+      var k = out('stKey').value;
+      window.aq.storage.delete(k)
+        .then(function() { log(out('stOut'), '已删除: ' + k, 'ok'); })
+        .catch(function(e) { log(out('stOut'), '删除失败: ' + e, 'err'); });
+    });
+    out('stKeys').addEventListener('click', function() {
+      window.aq.invoke('aq_storage_keys')
+        .then(function(keys) { log(out('stOut'), '所有 key: <span class="val">' + JSON.stringify(keys) + '</span>', 'ok'); })
+        .catch(function(e) { log(out('stOut'), '获取失败: ' + e, 'err'); });
+    });
+    out('stClear').addEventListener('click', function() {
+      window.aq.invoke('aq_storage_keys').then(function(keys) {
+        var ps = keys.map(function(k) { return window.aq.storage.delete(k); });
+        return Promise.all(ps).then(function() { log(out('stOut'), '已清除 ' + keys.length + ' 个 key', 'ok'); });
+      }).catch(function(e) { log(out('stOut'), '清除失败: ' + e, 'err'); });
+    });
+
+    // ---------- HTTP ----------
+    var doHttp = function(method, url, body) {
+      out('httpOut').innerHTML = '请求中...';
+      var p = method === 'GET' ? window.aq.http.get(url) : window.aq.http.post(url, body);
+      return p.then(function(resp) {
+        var s = typeof resp === 'string' ? resp : JSON.stringify(resp);
+        log(out('httpOut'), method + ' ' + url + ' → <span class="val">' + s.substring(0, 300) + '</span>', 'ok');
+      }).catch(function(e) { log(out('httpOut'), '请求失败: ' + e, 'err'); });
+    };
+    out('httpSend').addEventListener('click', function() {
+      var method = out('httpMethod').value;
+      var url = out('httpUrl').value;
+      var body = out('httpBody').value;
+      doHttp(method, url, body);
+    });
+    out('httpBinGet').addEventListener('click', function() {
+      doHttp('GET', 'https://httpbin.org/get', null);
+    });
+    out('httpBinPost').addEventListener('click', function() {
+      doHttp('POST', 'https://httpbin.org/post', '{"from":"hello-plugin"}');
+    });
+
+    // ---------- UI ----------
+    out('uiToastInfo').addEventListener('click', function() {
+      window.aq.ui.showToast('这是一条 info Toast');
+      log(out('uiOut'), '已发送 info toast', 'ok');
+    });
+    out('uiToastSuccess').addEventListener('click', function() {
+      window.aq.ui.showToast('操作成功！', 'success');
+      log(out('uiOut'), '已发送 success toast', 'ok');
+    });
+    out('uiToastError').addEventListener('click', function() {
+      window.aq.ui.showToast('出错了！', 'error');
+      log(out('uiOut'), '已发送 error toast', 'ok');
+    });
+    out('uiModal').addEventListener('click', function() {
+      window.aq.ui.showModal({ title: 'Hello Modal', content: '这是 aq.ui.showModal 的演示' })
+        .then(function(r) { log(out('uiOut'), 'Modal 返回: <span class="val">' + JSON.stringify(r) + '</span>', 'ok'); })
+        .catch(function(e) { log(out('uiOut'), 'Modal 关闭 (无操作)'); });
+    });
+
+    // ---------- 事件系统 ----------
+    var subscribed = false;
+    var handler = function(data) {
+      log(out('evtOut'), '收到事件: <span class="val">' + JSON.stringify(data) + '</span>', 'ok');
+    };
+    out('evtEmit').addEventListener('click', function() {
+      var name = out('evtName').value;
+      var data = JSON.parse(out('evtData').value || '{}');
+      window.aq.emit(name, data);
+      log(out('evtOut'), '已发射事件: ' + name, 'ok');
+    });
+    out('evtSub').addEventListener('click', function() {
+      if (subscribed) { log(out('evtOut'), '已订阅，请勿重复订阅', 'err'); return; }
+      window.aq.on('hello:ping', handler);
+      subscribed = true;
+      log(out('evtOut'), '已订阅 hello:ping 事件', 'ok');
+    });
+    out('evtUnsub').addEventListener('click', function() {
+      subscribed = false;
+      log(out('evtOut'), '取消订阅 (页面刷新后重置)', 'ok');
+    });
+
+    // ---------- invoke 底层 ----------
+    out('invokeSend').addEventListener('click', function() {
+      var cmd = out('invCmd').value;
+      var args = JSON.parse(out('invArgs').value || '{}');
+      window.aq.invoke(cmd, args)
+        .then(function(r) { log(out('invOut'), cmd + ' → <span class="val">' + JSON.stringify(r) + '</span>', 'ok'); })
+        .catch(function(e) { log(out('invOut'), cmd + ' 失败: ' + e, 'err'); });
+    });
+    out('invokeKeys').addEventListener('click', function() {
+      window.aq.invoke('aq_storage_keys')
+        .then(function(keys) { log(out('invOut'), 'storage keys: <span class="val">' + JSON.stringify(keys) + '</span>', 'ok'); })
+        .catch(function(e) { log(out('invOut'), '失败: ' + e, 'err'); });
+    });
+
+    // ---------- 文件系统 ----------
+    out('fsWrite').addEventListener('click', function() {
+      var path = out('fsPath').value;
+      var content = out('fsContent').value;
+      window.aq.invoke('aq_fs_write', { path: path, content: content })
+        .then(function() { log(out('fsOut'), '已写入: ' + path, 'ok'); })
+        .catch(function(e) { log(out('fsOut'), '写入失败: ' + e, 'err'); });
+    });
+    out('fsRead').addEventListener('click', function() {
+      var path = out('fsPath').value;
+      window.aq.invoke('aq_fs_read', { path: path })
+        .then(function(content) { log(out('fsOut'), '读取: ' + path + ' → <span class="val">"' + content + '"</span>', 'ok'); })
+        .catch(function(e) { log(out('fsOut'), '读取失败: ' + e, 'err'); });
+    });
+
+    // ---------- 插件参数 ----------
+    window.addEventListener('message', function(e) {
+      var d = e.data;
+      if (!d || d.source !== 'action-quick-host') return;
+      if (d.type === 'aq-init-bridge' && d.script) { try { eval(d.script); } catch(x){} return; }
+      if (d.type === 'plugin-params') {
+        out('params').innerHTML =
+          'query: <code>' + (d.params.query || '无') + '</code> &nbsp;|&nbsp; ' +
+          'contextText: <code>' + (d.params.contextText || '无') + '</code>';
       }
-    });
-
-    // 剪贴板 — 使用 aq.clipboard API
-    document.getElementById("trayClip").addEventListener("click", function() {
-      aq.clipboard.write("Hello from ActionQuick! 当前时间: " + new Date().toLocaleString())
-        .then(function() { clipResultEl.textContent = "已写入剪贴板"; })
-        .catch(function(e) { clipResultEl.textContent = "错误: " + e; });
-    });
-
-    document.getElementById("readClip").addEventListener("click", function() {
-      aq.clipboard.read()
-        .then(function(text) { clipResultEl.textContent = "剪贴板: " + text; })
-        .catch(function(e) { clipResultEl.textContent = "错误: " + e; });
-    });
-
-    // 通知 — 使用 aq.notification API
-    document.getElementById("notify").addEventListener("click", function() {
-      aq.notification.show({ title: "ActionQuick", body: "来自示例插件的通知" })
-        .then(function() { notifyResultEl.textContent = "通知已发送"; })
-        .catch(function(e) { notifyResultEl.textContent = "错误: " + e; });
-    });
-
-    // KV 存储 — 使用 aq.storage API
-    document.getElementById("storageSet").addEventListener("click", function() {
-      var key = document.getElementById("storageKey").value;
-      var value = document.getElementById("storageValue").value;
-      aq.storage.set(key, value)
-        .then(function() { storageResultEl.textContent = "已写入: " + key + " = " + value; })
-        .catch(function(e) { storageResultEl.textContent = "错误: " + e; });
-    });
-
-    document.getElementById("storageGet").addEventListener("click", function() {
-      var key = document.getElementById("storageKey").value;
-      aq.storage.get(key)
-        .then(function(value) { storageResultEl.textContent = "读取: " + key + " = " + JSON.stringify(value); })
-        .catch(function(e) { storageResultEl.textContent = "错误: " + e; });
-    });
-
-    document.getElementById("storageKeys").addEventListener("click", function() {
-      aq.invoke("aq_storage_keys")
-        .then(function(keys) { storageResultEl.textContent = "所有 key: " + JSON.stringify(keys); })
-        .catch(function(e) { storageResultEl.textContent = "错误: " + e; });
-    });
-
-    // HTTP — 使用 aq.http API
-    document.getElementById("httpGet").addEventListener("click", function() {
-      httpResultEl.textContent = "请求中...";
-      aq.http.get("https://httpbin.org/get")
-        .then(function(text) { httpResultEl.textContent = text.substring(0, 200) + "..."; })
-        .catch(function(e) { httpResultEl.textContent = "错误: " + e; });
     });
   </script>
 </body>

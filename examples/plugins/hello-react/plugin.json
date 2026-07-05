@@ -1,0 +1,12 @@
+{
+  "id": "hello-react",
+  "name": "Hello React 插件",
+  "version": "1.0.0",
+  "author": "ActionQuick",
+  "description": "React 示例插件，展示全部 SDK 能力",
+  "icon": "icon.png",
+  "main": "dist/index.html",
+  "keywords": ["hello-react", "react", "示例"],
+  "permissions": ["clipboard", "storage", "notification", "http", "fs:read", "fs:write"],
+  "minHostVersion": "0.2.0"
+}
