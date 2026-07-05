@@ -8,12 +8,12 @@ const os = require('os');
 const CACHE_DIR = path.join(os.homedir(), '.action-quick', 'cache');
 const GITHUB_REPO = 'action-quickly/action-quickly';
 
-function getPlatform() {
+function assetPatterns() {
   switch (os.platform()) {
-    case 'win32': return { ext: 'exe', isInstaller: true };
-    case 'darwin': return { ext: 'tar.gz', isInstaller: false };
-    case 'linux': return { ext: 'tar.gz', isInstaller: false };
-    default: return null;
+    case 'win32': return ['x64-setup.exe', 'x64_en-US.msi'];
+    case 'darwin': return ['x64.app.tar.gz', 'x64.dmg', 'aarch64.app.tar.gz'];
+    case 'linux': return ['.deb', '.AppImage'];
+    default: return [];
   }
 }
 
@@ -42,56 +42,34 @@ function parsePluginJson(filePath) {
   }
 }
 
-function artifactName(version) {
-  switch (os.platform()) {
-    case 'win32': return `ActionQuick_${version}_x64-setup.exe`;
-    case 'darwin': return 'ActionQuick_x64.app.tar.gz';
-    case 'linux': return `action-quick_${version}_amd64.deb`;
-    default: return null;
-  }
-}
-
 function hostDir(version) {
   return path.join(CACHE_DIR, `host-v${version}`);
 }
 
 function cacheFile(version) {
-  return path.join(CACHE_DIR, `host-v${version}`, '.cached');
+  return path.join(hostDir(version), '.cached');
 }
 
 function isCached(version) {
-  const plat = getPlatform();
-  if (!plat) {
-    console.error('错误: 不支持的操作系统:', os.platform());
-    process.exit(1);
-  }
-
-  if (plat.isInstaller) {
+  if (os.platform() === 'win32') {
     return fs.existsSync(cacheFile(version));
   }
-
-  const dir = hostDir(version);
-  const bin = binaryName(version);
-  return fs.existsSync(path.join(dir, bin));
+  const binPath = binaryPath(version);
+  return fs.existsSync(binPath);
 }
 
-function binaryName() {
+function binaryPath(version) {
   switch (os.platform()) {
-    case 'win32': return 'action-quick.exe';
-    case 'darwin': return path.join('ActionQuick.app', 'Contents', 'MacOS', 'action-quick');
-    case 'linux': return 'action-quick';
-    default: return null;
+    case 'win32':
+      // NSIS installs to %LOCALAPPDATA%\ActionQuick by default
+      return path.join(os.homedir(), 'AppData', 'Local', 'ActionQuick', 'action-quick.exe');
+    case 'darwin':
+      return path.join(hostDir(version), 'ActionQuick.app', 'Contents', 'MacOS', 'action-quick');
+    case 'linux':
+      return path.join(hostDir(version), 'action-quick');
+    default:
+      return null;
   }
-}
-
-function installedPath(version) {
-  const dir = hostDir(version);
-  const bin = binaryName();
-  if (os.platform() === 'win32') {
-    // NSIS installs to %LOCALAPPDATA%\ActionQuick by default
-    return path.join(os.homedir(), 'AppData', 'Local', 'ActionQuick', 'action-quick.exe');
-  }
-  return path.join(dir, bin);
 }
 
 function semverGte(a, b) {
@@ -139,27 +117,41 @@ async function findCompatibleRelease(minVersion) {
     const tag = release.tag_name.replace(/^v/, '');
     if (sameMajor(tag, minVersion) && semverGte(tag, minVersion)) {
       if (!best || semverGte(tag, best)) {
-        best = tag;
+        best = release;
       }
     }
   }
   return best;
 }
 
-async function downloadAndInstall(version) {
-  const plat = getPlatform();
-  const name = artifactName(version);
+function findAsset(release) {
+  const patterns = assetPatterns();
+  if (!release.assets) return null;
+  for (const pattern of patterns) {
+    const asset = release.assets.find(a => a.name.includes(pattern));
+    if (asset) return asset;
+  }
+  return null;
+}
+
+async function downloadAndInstall(release) {
+  const version = release.tag_name.replace(/^v/, '');
+  const asset = findAsset(release);
+  if (!asset) {
+    console.error(`错误: 未能找到当前平台 (${os.platform()}) 的兼容制品`);
+    process.exit(1);
+  }
+
   const dir = hostDir(version);
   fs.mkdirSync(dir, { recursive: true });
 
-  const url = `https://github.com/${GITHUB_REPO}/releases/download/v${version}/${name}`;
-  const dest = path.join(dir, name);
+  const dest = path.join(dir, asset.name);
 
   console.log(`下载 ActionQuick v${version}...`);
 
   await new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
-    https.get(url, (res) => {
+    https.get(asset.browser_download_url, (res) => {
       if (res.statusCode >= 300) {
         file.close();
         fs.unlinkSync(dest);
@@ -178,45 +170,47 @@ async function downloadAndInstall(version) {
     });
   });
 
-  console.log('  安装中...');
-
-  if (plat.isInstaller) {
+  if (os.platform() === 'win32') {
+    console.log('  安装中...');
     execSync(`"${dest}" /S`, { stdio: 'inherit' });
     fs.writeFileSync(cacheFile(version), '');
-  } else if (name.endsWith('.tar.gz')) {
+    try { fs.unlinkSync(dest); } catch {}
+  } else if (asset.name.endsWith('.tar.gz')) {
+    console.log('  解压中...');
     execSync(`tar -xzf "${dest}" -C "${dir}"`, { stdio: 'inherit' });
+    try { fs.unlinkSync(dest); } catch {}
   }
-
-  try { fs.unlinkSync(dest); } catch {}
 }
 
 async function main() {
   const manifest = parsePluginJson(pluginJsonPath());
-  const plat = getPlatform();
-  if (!plat) {
+  const patterns = assetPatterns();
+  if (patterns.length === 0) {
     console.error('错误: 不支持的操作系统:', os.platform());
     process.exit(1);
   }
 
   console.log(`查找兼容 v${manifest.minHostVersion} 的最新版本...`);
-  const version = await findCompatibleRelease(manifest.minHostVersion);
-  if (!version) {
+  const release = await findCompatibleRelease(manifest.minHostVersion);
+  if (!release) {
     console.error(`错误: 未找到兼容 v${manifest.minHostVersion} 的主程序版本`);
     process.exit(1);
   }
 
+  const version = release.tag_name.replace(/^v/, '');
+
   if (!isCached(version)) {
-    await downloadAndInstall(version);
+    await downloadAndInstall(release);
   }
 
-  const binaryPath = path.resolve(installedPath(version));
-  if (!fs.existsSync(binaryPath)) {
-    console.error(`错误: 主程序二进制未找到: ${binaryPath}`);
+  const binPath = binaryPath(version);
+  if (!fs.existsSync(binPath)) {
+    console.error(`错误: 主程序二进制未找到: ${binPath}`);
     process.exit(1);
   }
 
   console.log(`启动 ActionQuick v${version} (调试模式)...`);
-  const child = spawn(binaryPath, ['--dev-plugin', process.cwd()], {
+  const child = spawn(binPath, ['--dev-plugin', process.cwd()], {
     stdio: 'inherit',
     env: { ...process.env },
   });
