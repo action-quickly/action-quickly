@@ -1,0 +1,12 @@
+{
+  "id": "PLUGIN_ID",
+  "name": "PLUGIN_NAME",
+  "version": "1.0.0",
+  "author": "",
+  "description": "A new ActionQuick plugin",
+  "icon": "icon.png",
+  "main": "index.html",
+  "keywords": ["PLUGIN_ID"],
+  "permissions": ["clipboard"],
+  "minHostVersion": "0.2.0"
+}
