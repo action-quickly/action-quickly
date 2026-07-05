@@ -65,7 +65,7 @@ jobs:
           echo "Version: $VERSION"
 
       - name: Build and bundle
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -82,7 +82,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.tauri.outputs.release-upload-url }}
+          upload_url: ${{ steps.tauri.outputs.releaseUploadUrl }}
           asset_path: src-tauri/target/${{ matrix.target }}/release/action-quick${{ matrix.binary-ext }}
           asset_name: action-quick-${{ matrix.target }}${{ matrix.binary-ext }}
           asset_content_type: application/octet-stream
