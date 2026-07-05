@@ -154,23 +154,30 @@ async function downloadAndInstall(release) {
 
   await new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
-    https.get(asset.browser_download_url, (res) => {
-      if (res.statusCode >= 300) {
+    const doDownload = (url) => {
+      https.get(url, { headers: { 'User-Agent': 'action-quick-debug' } }, (res) => {
+        if (res.statusCode === 302 || res.statusCode === 301) {
+          doDownload(res.headers.location);
+          return;
+        }
+        if (res.statusCode >= 300) {
+          file.close();
+          try { fs.unlinkSync(dest); } catch {}
+          reject(new Error(`下载失败 (HTTP ${res.statusCode})`));
+          return;
+        }
+        res.pipe(file);
+        file.on('finish', () => {
+          file.close();
+          resolve();
+        });
+      }).on('error', (err) => {
         file.close();
-        fs.unlinkSync(dest);
-        reject(new Error(`下载失败 (HTTP ${res.statusCode})`));
-        return;
-      }
-      res.pipe(file);
-      file.on('finish', () => {
-        file.close();
-        resolve();
+        try { fs.unlinkSync(dest); } catch {}
+        reject(err);
       });
-    }).on('error', (err) => {
-      file.close();
-      fs.unlinkSync(dest);
-      reject(err);
-    });
+    };
+    doDownload(asset.browser_download_url);
   });
 
   if (asset.name.endsWith('.tar.gz')) {
