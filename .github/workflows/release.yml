@@ -37,7 +37,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -78,11 +78,9 @@ jobs:
           args: --target ${{ matrix.target }}
 
       - name: Upload raw binary
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.tauri.outputs.releaseUploadUrl }}
-          asset_path: src-tauri/target/${{ matrix.target }}/release/action-quick${{ matrix.binary-ext }}
-          asset_name: action-quick-${{ matrix.target }}${{ matrix.binary-ext }}
-          asset_content_type: application/octet-stream
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v${{ steps.version.outputs.version }} \
+            src-tauri/target/${{ matrix.target }}/release/action-quick${{ matrix.binary-ext }} \
+            --clobber
