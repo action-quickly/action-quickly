@@ -41,9 +41,7 @@ function onSelect(item: SearchResultItem) {
     }
   } else if (item.type === "calculator") {
     // Copy result to clipboard
-    import("@tauri-apps/api/core").then(({ invoke }) => {
-      navigator.clipboard.writeText(item.name).catch(() => {});
-    });
+    navigator.clipboard.writeText(item.name).catch(() => {});
   }
 }
 

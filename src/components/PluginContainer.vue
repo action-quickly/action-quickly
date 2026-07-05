@@ -21,7 +21,6 @@ import PluginErrorBoundary from './PluginErrorBoundary.vue';
 import { LightIsolation } from '../plugins/isolation/light';
 import { injectGlobalAPI, removeGlobalAPI } from '../plugins/bridge/global-api';
 import { HTMLPluginRenderer } from '../plugins/renderer/html-renderer';
-import type { PluginParams } from '../plugins/renderer/html-renderer';
 import type { IsolatedContainer } from '../plugins/isolation/types';
 import type { InstalledPlugin } from '../types/plugin';
 import type { PluginRenderer } from '../plugins/renderer/types';

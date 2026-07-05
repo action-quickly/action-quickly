@@ -68,7 +68,7 @@
   <div class="section">
     <h3>剪贴板</h3>
     <div class="actions">
-      <button id="writeClip">写入剪贴板</button>
+      <button id="trayClip">写入当前时间</button>
       <button id="readClip">读取剪贴板</button>
     </div>
     <div class="result" id="clipResult"></div>
@@ -109,46 +109,10 @@
     var storageResultEl = document.getElementById("storageResult");
     var httpResultEl = document.getElementById("httpResult");
 
-    // IPC 调用
-    var ipcId = 0;
-    var pendingCalls = {};
-
-    function invoke(cmd, args) {
-      return new Promise(function(resolve, reject) {
-        var id = ++ipcId;
-        pendingCalls[id] = { resolve: resolve, reject: reject };
-        window.parent.postMessage({
-          source: "action-quick-plugin",
-          id: id,
-          cmd: cmd,
-          args: args || {}
-        }, "*");
-      });
-    }
-
+    // 接收插件参数
     window.addEventListener("message", function(event) {
       var data = event.data;
       if (!data || data.source !== "action-quick-host") return;
-
-      // 主窗口请求注入桥接脚本
-      if (data.type === "aq-init-bridge" && data.script) {
-        try { eval(data.script); } catch(e) {}
-        return;
-      }
-
-      // IPC 响应
-      if (data.id && pendingCalls[data.id]) {
-        var call = pendingCalls[data.id];
-        delete pendingCalls[data.id];
-        if (data.error) {
-          call.reject(data.error);
-        } else {
-          call.resolve(data.result);
-        }
-        return;
-      }
-
-      // 接收插件参数
       if (data.type === "plugin-params") {
         var p = data.params;
         paramsEl.innerHTML =
@@ -157,52 +121,52 @@
       }
     });
 
-    // 剪贴板
-    document.getElementById("writeClip").addEventListener("click", function() {
-      invoke("aq_clipboard_write", { text: "Hello from ActionQuick!" })
+    // 剪贴板 — 使用 aq.clipboard API
+    document.getElementById("trayClip").addEventListener("click", function() {
+      aq.clipboard.write("Hello from ActionQuick! 当前时间: " + new Date().toLocaleString())
         .then(function() { clipResultEl.textContent = "已写入剪贴板"; })
         .catch(function(e) { clipResultEl.textContent = "错误: " + e; });
     });
 
     document.getElementById("readClip").addEventListener("click", function() {
-      invoke("aq_clipboard_read")
+      aq.clipboard.read()
         .then(function(text) { clipResultEl.textContent = "剪贴板: " + text; })
         .catch(function(e) { clipResultEl.textContent = "错误: " + e; });
     });
 
-    // 通知
+    // 通知 — 使用 aq.notification API
     document.getElementById("notify").addEventListener("click", function() {
-      invoke("aq_notification", { title: "ActionQuick", body: "来自示例插件的通知" })
+      aq.notification.show({ title: "ActionQuick", body: "来自示例插件的通知" })
         .then(function() { notifyResultEl.textContent = "通知已发送"; })
         .catch(function(e) { notifyResultEl.textContent = "错误: " + e; });
     });
 
-    // KV 存储
+    // KV 存储 — 使用 aq.storage API
     document.getElementById("storageSet").addEventListener("click", function() {
       var key = document.getElementById("storageKey").value;
       var value = document.getElementById("storageValue").value;
-      invoke("aq_storage_set", { key: key, value: value })
+      aq.storage.set(key, value)
         .then(function() { storageResultEl.textContent = "已写入: " + key + " = " + value; })
         .catch(function(e) { storageResultEl.textContent = "错误: " + e; });
     });
 
     document.getElementById("storageGet").addEventListener("click", function() {
       var key = document.getElementById("storageKey").value;
-      invoke("aq_storage_get", { key: key })
+      aq.storage.get(key)
         .then(function(value) { storageResultEl.textContent = "读取: " + key + " = " + JSON.stringify(value); })
         .catch(function(e) { storageResultEl.textContent = "错误: " + e; });
     });
 
     document.getElementById("storageKeys").addEventListener("click", function() {
-      invoke("aq_storage_keys")
+      aq.invoke("aq_storage_keys")
         .then(function(keys) { storageResultEl.textContent = "所有 key: " + JSON.stringify(keys); })
         .catch(function(e) { storageResultEl.textContent = "错误: " + e; });
     });
 
-    // HTTP
+    // HTTP — 使用 aq.http API
     document.getElementById("httpGet").addEventListener("click", function() {
       httpResultEl.textContent = "请求中...";
-      invoke("aq_http_get", { url: "https://httpbin.org/get" })
+      aq.http.get("https://httpbin.org/get")
         .then(function(text) { httpResultEl.textContent = text.substring(0, 200) + "..."; })
         .catch(function(e) { httpResultEl.textContent = "错误: " + e; });
     });

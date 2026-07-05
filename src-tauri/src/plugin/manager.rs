@@ -106,7 +106,7 @@ impl PluginManager {
             .map_err(|e| InstallError::ZipError(e.to_string()))?;
 
         // 先解压到临时目录，读取 manifest 校验后再移动到正式目录
-        let temp_dir = std::env::temp_dir().join(format!("aq-install-{}", uuid_like()));
+        let temp_dir = std::env::temp_dir().join(format!("aq-install-{}", crate::utils::uuid_like()));
         std::fs::create_dir_all(&temp_dir)
             .map_err(|e| InstallError::IoError(e.to_string()))?;
 
@@ -262,15 +262,7 @@ pub enum InstallError {
     IncompatibleHost { required: String, current: String },
 }
 
-/// 生成一个简单的伪 UUID（不依赖 uuid crate）
-fn uuid_like() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-    format!("{:x}", ts)
-}
+
 
 /// 移动目录内容到目标目录
 fn move_dir_contents(src: &Path, dst: &Path) -> Result<(), String> {

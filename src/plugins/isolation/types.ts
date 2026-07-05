@@ -1,6 +1,3 @@
-import type { InstalledPlugin, PluginManifest } from '../../types/plugin';
-
-export type { InstalledPlugin, PluginManifest };
 export type IsolationLevel = 'light' | 'strict' | 'worker';
 
 export interface IsolatedContainer {
@@ -13,15 +10,6 @@ export interface IsolatedContainer {
 
 export interface IsolationLayer {
   createContainer(parent: HTMLElement): IsolatedContainer;
-}
-
-export interface PluginRenderer {
-  render(
-    container: IsolatedContainer,
-    plugin: InstalledPlugin,
-    bridge: PluginBridge
-  ): Promise<void>;
-  destroy?: () => void;
 }
 
 export interface PluginBridge {

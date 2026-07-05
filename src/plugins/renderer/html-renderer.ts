@@ -46,29 +46,43 @@ export class HTMLPluginRenderer implements PluginRenderer {
   }
 
   private injectSDK(html: string, bridge: PluginBridge): string {
-    const sdkScript = `
-      <script>
-        window.__AQ_BRIDGE__ = ${JSON.stringify({
-          version: PLUGIN_SDK_VERSION,
-          pluginId: bridge.pluginId,
-        })};
-        window.aq = window.__AQ_BRIDGE__;
-        
-        // Escape 键处理
-        if (!window.__AQ_ESCAPE_HANDLER__) {
-          window.__AQ_ESCAPE_HANDLER__ = true;
-          document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-              e.preventDefault();
-              window.parent.postMessage({
-                source: 'action-quick-plugin',
-                type: 'key-escape'
-              }, '*');
-            }
-          });
-        }
-      <\/script>
-    `;
+    const sdkScript = `<script>
+(function(){
+  var n=0,p={};
+  window.addEventListener('message',function(e){
+    var d=e.data;
+    if(d&&d.source==='action-quick-host'&&d.id&&p[d.id]){
+      var c=p[d.id];delete p[d.id];
+      d.error?c.reject(new Error(d.error)):c.resolve(d.result);
+    }
+  });
+  function i(cmd,args){
+    return new Promise(function(r,j){
+      var k=String(++n);p[k]={resolve:r,reject:j};
+      window.parent.postMessage({source:'action-quick-plugin',id:k,cmd:cmd,args:args||{}},'*');
+    });
+  }
+  window.aq={
+    version:'${PLUGIN_SDK_VERSION}',
+    pluginId:'${bridge.pluginId}',
+    invoke:i,
+    clipboard:{read:function(){return i('aq_clipboard_read')},write:function(t){return i('aq_clipboard_write',{text:t})}},
+    storage:{get:function(k){return i('aq_storage_get',{key:k})},set:function(k,v){return i('aq_storage_set',{key:k,value:v})},"delete":function(k){return i('aq_storage_delete',{key:k})}},
+    notification:{show:function(o){return i('aq_notification',o)}},
+    http:{get:function(u,o){return i('aq_http_get',{url:u,...o})},post:function(u,b,o){return i('aq_http_post',{url:u,body:b,...o})}},
+    ui:{showToast:function(m,t){window.parent.postMessage({source:'action-quick-plugin',type:'toast',message:m,toastType:t},'*')},showModal:function(o){return i('aq_modal',o)}},
+    on:function(e,cb){if(!window.__AQ_L)window.__AQ_L={};if(!window.__AQ_L[e])window.__AQ_L[e]=[];window.__AQ_L[e].push(cb)},
+    emit:function(e,d){window.parent.postMessage({source:'action-quick-plugin',type:'event',id:String(++n),event:e,data:d},'*')}
+  };
+  window.__AQ_BRIDGE__=window.aq;
+  if(!window.__AQ_ESCAPE_HANDLER__){
+    window.__AQ_ESCAPE_HANDLER__=true;
+    document.addEventListener('keydown',function(e){
+      if(e.key==='Escape'){e.preventDefault();window.parent.postMessage({source:'action-quick-plugin',type:'key-escape'},'*');}
+    });
+  }
+})();
+<\/script>`;
 
     if (html.includes('</head>')) {
       return html.replace('</head>', `${sdkScript}</head>`);

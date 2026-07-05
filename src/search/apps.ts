@@ -5,7 +5,6 @@ import type { DesktopApp } from "./types";
 import { matchPinyinInitials } from "../utils/pinyin";
 
 const LAYER_APP_EXACT = 2; // L2 per spec: App exact match
-const LAYER_APP_FUZZY = 2; // L2 per spec: App fuzzy match (same layer)
 
 let appList: DesktopApp[] = [];
 let loaded = false;
