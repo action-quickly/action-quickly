@@ -62,9 +62,15 @@ fn position_window_center_top(window: &tauri::WebviewWindow) {
 }
 
 pub fn init_global_shortcut() -> TauriPlugin<tauri::Wry> {
-    tauri_plugin_global_shortcut::Builder::new()
-        .with_shortcut(Shortcut::new(Some(Modifiers::ALT), Code::Space))
-        .unwrap()
+    let shortcut = Shortcut::new(Some(Modifiers::ALT), Code::Space);
+    let builder = match tauri_plugin_global_shortcut::Builder::new().with_shortcut(shortcut) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("[ActionQuick] 全局快捷键注册失败 (Alt+Space): {e}");
+            tauri_plugin_global_shortcut::Builder::new()
+        }
+    };
+    builder
         .with_handler(|app, _shortcut, event| {
             if event.state == ShortcutState::Pressed {
                 if let Some(window) = app.get_webview_window("main") {
@@ -95,6 +101,17 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(init_global_shortcut())
+        .setup(|app| {
+            // Dev 模式：窗口直接显示，不依赖快捷键
+            if get_dev_plugin_path().is_some() {
+                if let Some(window) = app.get_webview_window("main") {
+                    position_window_center_top(&window);
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            Ok(())
+        })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Focused(false) = event {
                 if window.label() == "main" {
