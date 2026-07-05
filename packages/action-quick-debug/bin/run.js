@@ -180,18 +180,25 @@ async function downloadAndInstall(release) {
   // MSI 解压 (Windows 自带 msiexec，无需第三方工具)
   if (asset.name.endsWith('.msi')) {
     console.log('  解压 MSI...');
-    const extractDir = path.join(dir, 'msi-extract');
-    fs.mkdirSync(extractDir, { recursive: true });
-    execSync(`msiexec /a "${dest}" /qn TARGETDIR="${extractDir}"`, { stdio: 'inherit' });
-    const files = fs.readdirSync(extractDir, { recursive: true });
-    const exe = files.find(f => f.endsWith('.exe'));
-    if (exe) {
-      const exePath = path.join(extractDir, exe);
-      const finalExe = path.join(dir, 'action-quick.exe');
-      fs.renameSync(exePath, finalExe);
-    }
+    execSync(`msiexec /a "${dest}" /qn TARGETDIR="${dir}"`, { stdio: 'inherit' });
     try { fs.unlinkSync(dest); } catch {}
-    try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch {}
+    // 找到解压后的 exe（可能嵌套在子目录中）
+    const files = fs.readdirSync(dir, { recursive: true });
+    const exe = files.find(f => f.endsWith('.exe'));
+    if (!exe) {
+      console.error('错误: MSI 解压后未找到 exe');
+      process.exit(1);
+    }
+    // 如果 exe 在子目录中，移到外层方便运行
+    const exeSubDir = path.dirname(exe);
+    if (exeSubDir !== '.') {
+      const srcDir = path.join(dir, exeSubDir);
+      const entries = fs.readdirSync(srcDir);
+      for (const entry of entries) {
+        fs.renameSync(path.join(srcDir, entry), path.join(dir, entry));
+      }
+      try { fs.rmdirSync(srcDir); } catch {}
+    }
     fs.writeFileSync(cacheAssetPath(version), 'action-quick.exe');
     return;
   }
@@ -226,7 +233,8 @@ async function main() {
     await downloadAndInstall(release);
   }
 
-  const binPath = path.resolve(binaryPath(version, asset ? asset.name : null));
+  const cachedName = fs.readFileSync(cacheAssetPath(version), 'utf-8').trim();
+  const binPath = path.resolve(binaryPath(version, cachedName));
   if (!fs.existsSync(binPath)) {
     console.error(`错误: 主程序二进制未找到: ${binPath}`);
     process.exit(1);
