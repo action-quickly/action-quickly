@@ -102,8 +102,15 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(init_global_shortcut())
         .setup(|app| {
-            // Dev 模式：窗口直接显示，不依赖快捷键
-            if get_dev_plugin_path().is_some() {
+            // Dev 模式：保存权限并直接显示窗口
+            if let Some(dev_path) = get_dev_plugin_path() {
+                let manifest_path = std::path::Path::new(dev_path).join("plugin.json");
+                if let Ok(content) = std::fs::read_to_string(&manifest_path) {
+                    if let Ok(manifest) = PluginManifest::from_json(&content) {
+                        let perm_store = PermissionStore::new(app.handle().clone());
+                        let _ = perm_store.save_permissions(&manifest.id, &manifest.permissions);
+                    }
+                }
                 if let Some(window) = app.get_webview_window("main") {
                     position_window_center_top(&window);
                     let _ = window.show();
