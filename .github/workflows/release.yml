@@ -78,6 +78,7 @@ jobs:
           args: --target ${{ matrix.target }}
 
       - name: Upload raw binary
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
