@@ -65,7 +65,7 @@ jobs:
           echo "Version: $VERSION"
 
       - name: Build and bundle
-        uses: tauri-apps/tauri-action@v2
+        uses: tauri-apps/tauri-action@v0
         id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
