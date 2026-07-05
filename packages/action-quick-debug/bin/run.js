@@ -2,11 +2,20 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const os = require('os');
 
 const CACHE_DIR = path.join(os.homedir(), '.action-quick', 'cache');
 const GITHUB_REPO = 'action-quickly/action-quickly';
+
+function getPlatform() {
+  switch (os.platform()) {
+    case 'win32': return { ext: 'exe', isInstaller: true };
+    case 'darwin': return { ext: 'tar.gz', isInstaller: false };
+    case 'linux': return { ext: 'tar.gz', isInstaller: false };
+    default: return null;
+  }
+}
 
 function pluginJsonPath() {
   const p = path.resolve(process.cwd(), 'plugin.json');
@@ -33,11 +42,11 @@ function parsePluginJson(filePath) {
   }
 }
 
-function getArtifactName() {
+function artifactName(version) {
   switch (os.platform()) {
-    case 'win32': return 'action-quick.exe';
-    case 'darwin': return 'ActionQuick_x86_64.app.tar.gz';
-    case 'linux': return 'action-quick-x86_64-unknown-linux-gnu.tar.gz';
+    case 'win32': return `ActionQuick_${version}_x64-setup.exe`;
+    case 'darwin': return 'ActionQuick_x64.app.tar.gz';
+    case 'linux': return `action-quick_${version}_amd64.deb`;
     default: return null;
   }
 }
@@ -46,13 +55,43 @@ function hostDir(version) {
   return path.join(CACHE_DIR, `host-v${version}`);
 }
 
+function cacheFile(version) {
+  return path.join(CACHE_DIR, `host-v${version}`, '.cached');
+}
+
 function isCached(version) {
-  const artifact = getArtifactName();
-  if (!artifact) {
+  const plat = getPlatform();
+  if (!plat) {
     console.error('错误: 不支持的操作系统:', os.platform());
     process.exit(1);
   }
-  return fs.existsSync(path.join(hostDir(version), artifact));
+
+  if (plat.isInstaller) {
+    return fs.existsSync(cacheFile(version));
+  }
+
+  const dir = hostDir(version);
+  const bin = binaryName(version);
+  return fs.existsSync(path.join(dir, bin));
+}
+
+function binaryName() {
+  switch (os.platform()) {
+    case 'win32': return 'action-quick.exe';
+    case 'darwin': return path.join('ActionQuick.app', 'Contents', 'MacOS', 'action-quick');
+    case 'linux': return 'action-quick';
+    default: return null;
+  }
+}
+
+function installedPath(version) {
+  const dir = hostDir(version);
+  const bin = binaryName();
+  if (os.platform() === 'win32') {
+    // NSIS installs to %LOCALAPPDATA%\ActionQuick by default
+    return path.join(os.homedir(), 'AppData', 'Local', 'ActionQuick', 'action-quick.exe');
+  }
+  return path.join(dir, bin);
 }
 
 function semverGte(a, b) {
@@ -107,59 +146,54 @@ async function findCompatibleRelease(minVersion) {
   return best;
 }
 
-function getBinPath(version) {
-  const artifact = getArtifactName();
-  const dir = hostDir(version);
-
-  if (os.platform() === 'win32') {
-    return path.join(dir, artifact);
-  }
-
-  if (os.platform() === 'darwin') {
-    return path.join(dir, 'ActionQuick.app', 'Contents', 'MacOS', 'action-quick');
-  }
-
-  return path.join(dir, 'action-quick');
-}
-
-async function downloadRelease(version) {
-  const artifact = getArtifactName();
+async function downloadAndInstall(version) {
+  const plat = getPlatform();
+  const name = artifactName(version);
   const dir = hostDir(version);
   fs.mkdirSync(dir, { recursive: true });
 
-  const url = `https://github.com/${GITHUB_REPO}/releases/download/v${version}/${artifact}`;
-  const dest = path.join(dir, artifact);
+  const url = `https://github.com/${GITHUB_REPO}/releases/download/v${version}/${name}`;
+  const dest = path.join(dir, name);
 
   console.log(`下载 ActionQuick v${version}...`);
 
-  return new Promise((resolve, reject) => {
+  await new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
     https.get(url, (res) => {
       if (res.statusCode >= 300) {
         file.close();
         fs.unlinkSync(dest);
-        reject(new Error(`下载失败 (HTTP ${res.statusCode}): ${url}`));
+        reject(new Error(`下载失败 (HTTP ${res.statusCode})`));
         return;
       }
       res.pipe(file);
       file.on('finish', () => {
         file.close();
-        if (artifact.endsWith('.tar.gz')) {
-          console.log('  解压中...');
-          const { execSync } = require('child_process');
-          execSync(`tar -xzf "${dest}" -C "${dir}"`);
-          try { fs.unlinkSync(dest); } catch {}
-        }
         resolve();
       });
-    }).on('error', (err) => { file.close(); fs.unlinkSync(dest); reject(err); });
+    }).on('error', (err) => {
+      file.close();
+      fs.unlinkSync(dest);
+      reject(err);
+    });
   });
+
+  console.log('  安装中...');
+
+  if (plat.isInstaller) {
+    execSync(`"${dest}" /S`, { stdio: 'inherit' });
+    fs.writeFileSync(cacheFile(version), '');
+  } else if (name.endsWith('.tar.gz')) {
+    execSync(`tar -xzf "${dest}" -C "${dir}"`, { stdio: 'inherit' });
+  }
+
+  try { fs.unlinkSync(dest); } catch {}
 }
 
 async function main() {
   const manifest = parsePluginJson(pluginJsonPath());
-
-  if (!getArtifactName()) {
+  const plat = getPlatform();
+  if (!plat) {
     console.error('错误: 不支持的操作系统:', os.platform());
     process.exit(1);
   }
@@ -172,10 +206,10 @@ async function main() {
   }
 
   if (!isCached(version)) {
-    await downloadRelease(version);
+    await downloadAndInstall(version);
   }
 
-  const binaryPath = getBinPath(version);
+  const binaryPath = path.resolve(installedPath(version));
   if (!fs.existsSync(binaryPath)) {
     console.error(`错误: 主程序二进制未找到: ${binaryPath}`);
     process.exit(1);
