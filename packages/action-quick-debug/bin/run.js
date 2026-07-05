@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const { spawn, execSync } = require('child_process');
+const { spawn } = require('child_process');
 const os = require('os');
 
 const CACHE_DIR = path.join(os.homedir(), '.action-quick', 'cache');
@@ -10,8 +10,8 @@ const GITHUB_REPO = 'action-quickly/action-quickly';
 
 function assetPatterns() {
   switch (os.platform()) {
-    case 'win32': return ['action-quick-x86_64-pc-windows-msvc.exe', 'x64-setup.exe', 'x64_en-US.msi'];
-    case 'darwin': return ['action-quick-x86_64-apple-darwin', 'action-quick-aarch64-apple-darwin', 'x64.app.tar.gz', 'x64.dmg', 'aarch64.app.tar.gz'];
+    case 'win32': return ['action-quick-x86_64-pc-windows-msvc.exe'];
+    case 'darwin': return ['action-quick-x86_64-apple-darwin', 'action-quick-aarch64-apple-darwin'];
     case 'linux': return ['.deb', '.AppImage'];
     default: return [];
   }
@@ -64,10 +64,7 @@ function binaryPath(version, assetName) {
     case 'win32':
       return path.join(dir, assetName || 'action-quick-x86_64-pc-windows-msvc.exe');
     case 'darwin':
-      if (assetName && assetName.includes('action-quick-')) {
-        return path.join(dir, assetName);
-      }
-      return path.join(dir, 'ActionQuick.app', 'Contents', 'MacOS', 'action-quick');
+      return path.join(dir, assetName || 'action-quick-x86_64-apple-darwin');
     case 'linux':
       return path.join(dir, assetName || 'action-quick');
     default:
@@ -180,20 +177,9 @@ async function downloadAndInstall(release) {
     doDownload(asset.browser_download_url);
   });
 
-  if (asset.name.endsWith('.tar.gz')) {
-    console.log('  解压中...');
-    execSync(`tar -xzf "${dest}" -C "${dir}"`, { stdio: 'inherit' });
-    try { fs.unlinkSync(dest); } catch {}
-  } else if (asset.name.endsWith('-setup.exe')) {
-    console.log('  提取二进制...');
-    const sevenZip = path.join(process.env['ProgramFiles'] || 'C:\\Program Files', '7-Zip', '7z.exe');
-    if (fs.existsSync(sevenZip)) {
-      execSync(`"${sevenZip}" x "${dest}" -o"${dir}" -y`, { stdio: 'inherit' });
-      try { fs.unlinkSync(dest); } catch {}
-    } else {
-      console.error('错误: 需要 7-Zip 来提取安装器，请安装 https://7-zip.org');
-      process.exit(1);
-    }
+  // 设置可执行权限 (macOS/Linux)
+  if (os.platform() !== 'win32') {
+    try { fs.chmodSync(dest, 0o755); } catch {}
   }
 
   fs.writeFileSync(cacheAssetPath(version), asset.name);
