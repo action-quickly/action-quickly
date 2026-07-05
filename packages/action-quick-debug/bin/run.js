@@ -10,7 +10,7 @@ const GITHUB_REPO = 'action-quickly/action-quickly';
 
 function assetPatterns() {
   switch (os.platform()) {
-    case 'win32': return ['action-quick-x86_64-pc-windows-msvc.exe', 'x64_en-US.msi'];
+    case 'win32': return ['action-quick.exe', 'x64_en-US.msi'];
     case 'darwin': return ['action-quick-x86_64-apple-darwin', 'action-quick-aarch64-apple-darwin'];
     case 'linux': return ['.deb', '.AppImage'];
     default: return [];
@@ -62,7 +62,7 @@ function binaryPath(version, assetName) {
   const dir = hostDir(version);
   switch (os.platform()) {
     case 'win32':
-      return path.join(dir, assetName || 'action-quick-x86_64-pc-windows-msvc.exe');
+      return path.join(dir, assetName || 'action-quick.exe');
     case 'darwin':
       return path.join(dir, assetName || 'action-quick-x86_64-apple-darwin');
     case 'linux':
@@ -187,12 +187,12 @@ async function downloadAndInstall(release) {
     const exe = files.find(f => f.endsWith('.exe'));
     if (exe) {
       const exePath = path.join(extractDir, exe);
-      const finalExe = path.join(dir, 'action-quick-x86_64-pc-windows-msvc.exe');
+      const finalExe = path.join(dir, 'action-quick.exe');
       fs.renameSync(exePath, finalExe);
     }
     try { fs.unlinkSync(dest); } catch {}
     try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch {}
-    fs.writeFileSync(cacheAssetPath(version), 'action-quick-x86_64-pc-windows-msvc.exe');
+    fs.writeFileSync(cacheAssetPath(version), 'action-quick.exe');
     return;
   }
 
