@@ -1,0 +1,12 @@
+{
+  "id": "PLUGIN_ID",
+  "name": "PLUGIN_NAME",
+  "version": "1.0.0",
+  "author": "",
+  "description": "A React-based ActionQuick plugin",
+  "icon": "icon.png",
+  "main": "dist/index.html",
+  "keywords": ["PLUGIN_ID"],
+  "permissions": ["clipboard", "storage", "notification"],
+  "minHostVersion": "0.2.0"
+}
