@@ -10,8 +10,8 @@ const GITHUB_REPO = 'action-quickly/action-quickly';
 
 function assetPatterns() {
   switch (os.platform()) {
-    case 'win32': return ['x64-setup.exe', 'x64_en-US.msi'];
-    case 'darwin': return ['x64.app.tar.gz', 'x64.dmg', 'aarch64.app.tar.gz'];
+    case 'win32': return ['action-quick-x86_64-pc-windows-msvc.exe', 'x64-setup.exe', 'x64_en-US.msi'];
+    case 'darwin': return ['action-quick-x86_64-apple-darwin', 'action-quick-aarch64-apple-darwin', 'x64.app.tar.gz', 'x64.dmg', 'aarch64.app.tar.gz'];
     case 'linux': return ['.deb', '.AppImage'];
     default: return [];
   }
@@ -46,27 +46,30 @@ function hostDir(version) {
   return path.join(CACHE_DIR, `host-v${version}`);
 }
 
-function cacheFile(version) {
-  return path.join(hostDir(version), '.cached');
+function cacheAssetPath(version) {
+  return path.join(hostDir(version), '.asset-name');
 }
 
 function isCached(version) {
-  if (os.platform() === 'win32') {
-    return fs.existsSync(cacheFile(version));
-  }
-  const binPath = binaryPath(version);
+  const marker = cacheAssetPath(version);
+  if (!fs.existsSync(marker)) return false;
+  const assetName = fs.readFileSync(marker, 'utf-8').trim();
+  const binPath = binaryPath(version, assetName);
   return fs.existsSync(binPath);
 }
 
-function binaryPath(version) {
+function binaryPath(version, assetName) {
+  const dir = hostDir(version);
   switch (os.platform()) {
     case 'win32':
-      // NSIS installs to %LOCALAPPDATA%\ActionQuick by default
-      return path.join(os.homedir(), 'AppData', 'Local', 'ActionQuick', 'action-quick.exe');
+      return path.join(dir, assetName || 'action-quick-x86_64-pc-windows-msvc.exe');
     case 'darwin':
-      return path.join(hostDir(version), 'ActionQuick.app', 'Contents', 'MacOS', 'action-quick');
+      if (assetName && assetName.includes('action-quick-')) {
+        return path.join(dir, assetName);
+      }
+      return path.join(dir, 'ActionQuick.app', 'Contents', 'MacOS', 'action-quick');
     case 'linux':
-      return path.join(hostDir(version), 'action-quick');
+      return path.join(dir, assetName || 'action-quick');
     default:
       return null;
   }
@@ -170,16 +173,23 @@ async function downloadAndInstall(release) {
     });
   });
 
-  if (os.platform() === 'win32') {
-    console.log('  安装中...');
-    execSync(`"${dest}" /S`, { stdio: 'inherit' });
-    fs.writeFileSync(cacheFile(version), '');
-    try { fs.unlinkSync(dest); } catch {}
-  } else if (asset.name.endsWith('.tar.gz')) {
+  if (asset.name.endsWith('.tar.gz')) {
     console.log('  解压中...');
     execSync(`tar -xzf "${dest}" -C "${dir}"`, { stdio: 'inherit' });
     try { fs.unlinkSync(dest); } catch {}
+  } else if (asset.name.endsWith('-setup.exe')) {
+    console.log('  提取二进制...');
+    const sevenZip = path.join(process.env['ProgramFiles'] || 'C:\\Program Files', '7-Zip', '7z.exe');
+    if (fs.existsSync(sevenZip)) {
+      execSync(`"${sevenZip}" x "${dest}" -o"${dir}" -y`, { stdio: 'inherit' });
+      try { fs.unlinkSync(dest); } catch {}
+    } else {
+      console.error('错误: 需要 7-Zip 来提取安装器，请安装 https://7-zip.org');
+      process.exit(1);
+    }
   }
+
+  fs.writeFileSync(cacheAssetPath(version), asset.name);
 }
 
 async function main() {
@@ -198,12 +208,13 @@ async function main() {
   }
 
   const version = release.tag_name.replace(/^v/, '');
+  const asset = findAsset(release);
 
   if (!isCached(version)) {
     await downloadAndInstall(release);
   }
 
-  const binPath = binaryPath(version);
+  const binPath = path.resolve(binaryPath(version, asset ? asset.name : null));
   if (!fs.existsSync(binPath)) {
     console.error(`错误: 主程序二进制未找到: ${binPath}`);
     process.exit(1);
